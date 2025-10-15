@@ -1,59 +1,128 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, FileText, Heart, Activity, Clock, MapPin, User, Plus } from "lucide-react"
 import Link from "next/link"
+import { PatientService } from "@/lib/services"
+import { useAuth } from "@/contexts/auth-context"
 
-// Mock data
-const upcomingAppointments = [
-  {
-    id: 1,
-    doctor: "Dr. Sarah Johnson",
-    specialty: "Cardiologist",
-    date: "2025-10-20",
-    time: "10:00 AM",
-    location: "Cardiology Department, Room 301",
-    status: "confirmed",
-  },
-  {
-    id: 2,
-    doctor: "Dr. Michael Chen",
-    specialty: "General Physician",
-    date: "2025-10-25",
-    time: "2:30 PM",
-    location: "General Medicine, Room 105",
-    status: "pending",
-  },
-]
+// Types for our data
+interface Appointment {
+  id: number
+  doctor_id: number
+  doctor_name?: string
+  doctor_specialty?: string
+  appointment_date: string
+  status: string
+  created_at?: string
+  updated_at?: string
+}
 
-const recentRecords = [
-  {
-    id: 1,
-    title: "Annual Checkup",
-    doctor: "Dr. Sarah Johnson",
-    date: "2025-10-10",
-    type: "Checkup",
-  },
-  {
-    id: 2,
-    title: "Blood Test Results",
-    doctor: "Dr. Michael Chen",
-    date: "2025-10-05",
-    type: "Lab Results",
-  },
-]
-
-const healthStats = [
-  { label: "Blood Pressure", value: "120/80", unit: "mmHg", status: "normal" },
-  { label: "Heart Rate", value: "72", unit: "bpm", status: "normal" },
-  { label: "Weight", value: "70", unit: "kg", status: "normal" },
-  { label: "Temperature", value: "98.6", unit: "°F", status: "normal" },
-]
+interface MedicalRecord {
+  id: number
+  patient_id: number
+  doctor_id: number
+  doctor_name?: string
+  diagnosis: string
+  treatment_plan: string
+  prescriptions: string
+  record_date: string
+  updated_at?: string
+}
 
 export default function PatientDashboard() {
+  const { user } = useAuth()
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
+  const [recentRecords, setRecentRecords] = useState<MedicalRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Fetch appointments
+        const appointmentResponse = await PatientService.getAppointmentHistory()
+        if (appointmentResponse.data) {
+          // Filter for upcoming appointments (you might want to adjust this logic)
+          const upcoming = appointmentResponse.data
+            .filter((apt: Appointment) => new Date(apt.appointment_date) > new Date())
+            .slice(0, 2) // Limit to 2 for display
+          setUpcomingAppointments(upcoming)
+        }
+        
+        // Fetch medical records
+        const recordResponse = await PatientService.getMedicalRecords()
+        if (recordResponse.data) {
+          // Get most recent records
+          const recent = recordResponse.data.slice(0, 2) // Limit to 2 for display
+          setRecentRecords(recent)
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err)
+        setError("Failed to load dashboard data. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user])
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  // Format time for display
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Welcome Back!</h1>
+            <p className="text-muted-foreground mt-1">Loading your health information...</p>
+          </div>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Welcome Back!</h1>
+          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Activity className="h-16 w-16 text-destructive/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+              <p className="text-muted-foreground text-center mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout role="patient">
       <div className="space-y-6">
@@ -120,7 +189,7 @@ export default function PatientDashboard() {
           </Card>
         </div>
 
-        {/* Health Stats */}
+        {/* Health Stats - Kept as static for now since API doesn't provide this data */}
         <Card>
           <CardHeader>
             <CardTitle>Health Statistics</CardTitle>
@@ -128,20 +197,50 @@ export default function PatientDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {healthStats.map((stat) => (
-                <div key={stat.label} className="space-y-2">
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-2xl font-bold">
-                      {stat.value}
-                      <span className="text-sm font-normal text-muted-foreground ml-1">{stat.unit}</span>
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                    {stat.status}
-                  </Badge>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Blood Pressure</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">
+                    --<span className="text-sm font-normal text-muted-foreground ml-1">mmHg</span>
+                  </p>
                 </div>
-              ))}
+                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                  Not recorded
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Heart Rate</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">
+                    --<span className="text-sm font-normal text-muted-foreground ml-1">bpm</span>
+                  </p>
+                </div>
+                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                  Not recorded
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Weight</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">
+                    --<span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
+                  </p>
+                </div>
+                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                  Not recorded
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Temperature</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold">
+                    --<span className="text-sm font-normal text-muted-foreground ml-1">°F</span>
+                  </p>
+                </div>
+                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                  Not recorded
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -174,25 +273,25 @@ export default function PatientDashboard() {
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold">{appointment.doctor}</p>
+                      <p className="font-semibold">{appointment.doctor_name || "Doctor"}</p>
                       <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
                         {appointment.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{appointment.specialty}</p>
+                    <p className="text-sm text-muted-foreground">{appointment.doctor_specialty || "Specialty"}</p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {appointment.date}
+                        {formatDate(appointment.appointment_date)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {appointment.time}
+                        {formatTime(appointment.appointment_date)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
-                      {appointment.location}
+                      Location not specified
                     </p>
                   </div>
                 </div>
@@ -201,6 +300,9 @@ export default function PatientDashboard() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No upcoming appointments</p>
+                  <Button asChild variant="link" className="mt-2">
+                    <Link href="/patient/appointments/book">Book an appointment</Link>
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -226,11 +328,11 @@ export default function PatientDashboard() {
                     </div>
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="font-semibold">{record.title}</p>
-                    <p className="text-sm text-muted-foreground">{record.doctor}</p>
+                    <p className="font-semibold">{record.diagnosis || "Medical Record"}</p>
+                    <p className="text-sm text-muted-foreground">{record.doctor_name || "Doctor"}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">{record.date}</span>
-                      <Badge variant="outline">{record.type}</Badge>
+                      <span className="text-sm text-muted-foreground">{formatDate(record.record_date)}</span>
+                      <Badge variant="outline">Record</Badge>
                     </div>
                   </div>
                 </div>

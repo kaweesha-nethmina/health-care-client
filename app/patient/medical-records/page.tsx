@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,67 +8,100 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Calendar, Activity, FileText, User, Search, Download, Eye } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PatientService } from "@/lib/services"
+import { useAuth } from "@/contexts/auth-context"
 
-const medicalRecords = [
-  {
-    id: 1,
-    title: "Annual Physical Examination",
-    doctor: "Dr. Sarah Johnson",
-    date: "2025-10-10",
-    type: "Checkup",
-    diagnosis: "Healthy - No concerns",
-    prescriptions: "Multivitamin supplement",
-  },
-  {
-    id: 2,
-    title: "Blood Test Results",
-    doctor: "Dr. Michael Chen",
-    date: "2025-10-05",
-    type: "Lab Results",
-    diagnosis: "All values within normal range",
-    prescriptions: "None",
-  },
-  {
-    id: 3,
-    title: "Cardiology Consultation",
-    doctor: "Dr. Sarah Johnson",
-    date: "2025-09-20",
-    type: "Consultation",
-    diagnosis: "Mild hypertension",
-    prescriptions: "Lisinopril 10mg daily",
-  },
-]
-
-const prescriptions = [
-  {
-    id: 1,
-    medication: "Lisinopril",
-    dosage: "10mg daily",
-    doctor: "Dr. Sarah Johnson",
-    startDate: "2025-09-20",
-    endDate: "2026-09-20",
-    status: "active",
-  },
-  {
-    id: 2,
-    medication: "Multivitamin",
-    dosage: "1 tablet daily",
-    doctor: "Dr. Sarah Johnson",
-    startDate: "2025-10-10",
-    endDate: "2026-10-10",
-    status: "active",
-  },
-]
+interface MedicalRecord {
+  id: number
+  patient_id: number
+  doctor_id: number
+  doctor_name?: string
+  diagnosis: string
+  treatment_plan: string
+  prescriptions: string
+  record_date: string
+  updated_at?: string
+}
 
 export default function MedicalRecordsPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    const fetchMedicalRecords = async () => {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await PatientService.getMedicalRecords()
+        if (response.data) {
+          setMedicalRecords(response.data)
+        }
+      } catch (err) {
+        console.error("Error fetching medical records:", err)
+        setError("Failed to load medical records. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMedicalRecords()
+  }, [user])
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  // Filter records based on search query
   const filteredRecords = medicalRecords.filter(
     (record) =>
-      record.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.type.toLowerCase().includes(searchQuery.toLowerCase()),
+      record.diagnosis.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.doctor_name && record.doctor_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      record.treatment_plan.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  if (loading) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Medical Records</h1>
+            <p className="text-muted-foreground mt-1">Loading your health history...</p>
+          </div>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Medical Records</h1>
+            <p className="text-muted-foreground mt-1">Access your complete health history and documents</p>
+          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Activity className="h-16 w-16 text-destructive/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Error Loading Records</h3>
+              <p className="text-muted-foreground text-center mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout role="patient">
@@ -103,23 +136,27 @@ export default function MedicalRecordsPage() {
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <CardTitle className="text-xl">{record.title}</CardTitle>
+                          <CardTitle className="text-xl">{record.diagnosis || "Medical Record"}</CardTitle>
                           <CardDescription>
-                            {record.doctor} • {record.date}
+                            {record.doctor_name || "Doctor"} • {formatDate(record.record_date)}
                           </CardDescription>
                         </div>
-                        <Badge variant="outline">{record.type}</Badge>
+                        <Badge variant="outline">Record</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <p className="text-sm font-medium text-muted-foreground mb-1">Diagnosis</p>
-                          <p className="text-sm">{record.diagnosis}</p>
+                          <p className="text-sm">{record.diagnosis || "Not specified"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Treatment Plan</p>
+                          <p className="text-sm">{record.treatment_plan || "Not specified"}</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-muted-foreground mb-1">Prescriptions</p>
-                          <p className="text-sm">{record.prescriptions}</p>
+                          <p className="text-sm">{record.prescriptions || "None"}</p>
                         </div>
                       </div>
                       <div className="flex gap-2 pt-2">
@@ -150,53 +187,19 @@ export default function MedicalRecordsPage() {
           </TabsContent>
 
           <TabsContent value="prescriptions" className="space-y-4">
-            {prescriptions.length > 0 ? (
-              <div className="grid gap-4">
-                {prescriptions.map((prescription) => (
-                  <Card key={prescription.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold">{prescription.medication}</h3>
-                          <p className="text-sm text-muted-foreground">{prescription.dosage}</p>
-                        </div>
-                        <Badge variant={prescription.status === "active" ? "default" : "secondary"}>
-                          {prescription.status}
-                        </Badge>
-                      </div>
-                      <div className="grid gap-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Prescribed by:</span>
-                          <span className="font-medium">{prescription.doctor}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Start Date:</span>
-                          <span className="font-medium">{prescription.startDate}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">End Date:</span>
-                          <span className="font-medium">{prescription.endDate}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-4">
-                        <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Prescriptions</h3>
-                  <p className="text-muted-foreground text-center">Your active prescriptions will appear here</p>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Prescriptions Integration</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Prescription data will be integrated from the Prescription Service API
+                </p>
+                <Button variant="outline" disabled>
+                  <Download className="h-4 w-4 mr-2" />
+                  Coming Soon
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

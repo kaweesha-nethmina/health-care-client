@@ -38,10 +38,12 @@ const getNavigationForRole = (role: UserRole) => {
   > = {
     patient: [
       { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
+      { name: "Doctors", href: "/patient/doctors", icon: Users },
       { name: "Appointments", href: "/patient/appointments", icon: Calendar },
       { name: "Medical Records", href: "/patient/medical-records", icon: FileText },
       { name: "Billing", href: "/patient/billing", icon: CreditCard },
       { name: "Insurance", href: "/patient/insurance", icon: Shield },
+      { name: "Insurance Providers", href: "/patient/insurance/providers", icon: Shield },
       { name: "Profile", href: "/patient/profile", icon: User },
     ],
     doctor: [
@@ -123,8 +125,8 @@ export function Sidebar({ role, isMobile = false, onClose }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors",
                   isActive
-                    ? "bg-blue-600 text-white dark:bg-blue-700"
-                    : "text-foreground hover:bg-blue-100 hover:text-blue-900 dark:text-blue-100 dark:hover:bg-blue-900/30 dark:hover:text-blue-50",
+                    ? "bg-blue-600 text-blue-50"
+                    : "text-foreground hover:bg-blue-100 hover:text-blue-900 dark:hover:bg-blue-900/30 dark:hover:text-blue-100",
                 )}
               >
                 <Icon className="h-5 w-5" />
