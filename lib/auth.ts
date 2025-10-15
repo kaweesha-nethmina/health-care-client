@@ -14,6 +14,7 @@ export interface User {
   email: string
   name: string
   role: UserRole
+  profile_picture_url?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -41,8 +42,8 @@ export function saveAuthData(token: string, user: User): void {
     localStorage.setItem(AUTH_STORAGE_KEY, token)
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
     
-    // Also set as cookie for middleware access
-    document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`
+    // Also set as cookie for middleware access with proper attributes
+    document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax; Secure=false`
     
     console.log("[v0] Auth data saved successfully");
   } catch (error) {
@@ -91,7 +92,7 @@ export function clearAuthData(): void {
     localStorage.removeItem(AUTH_STORAGE_KEY)
     localStorage.removeItem(USER_STORAGE_KEY)
     
-    // Also clear the cookie
+    // Also clear the cookie with proper path and domain
     document.cookie = `auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
     
     console.log("[v0] Auth data cleared successfully");

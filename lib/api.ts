@@ -12,13 +12,27 @@ export interface ApiResponse<T = any> extends Record<string, any> {
 export class ApiClient {
   private static getAuthToken(): string | null {
     if (typeof window === "undefined") return null
-    return localStorage.getItem("auth_token")
+    
+    // First try to get from localStorage
+    const localStorageToken = localStorage.getItem("auth_token")
+    if (localStorageToken) return localStorageToken
+    
+    // Fallback to cookie
+    const cookies = document.cookie.split(';')
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=')
+      if (name === 'auth_token') {
+        return value
+      }
+    }
+    
+    return null
   }
 
   private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const token = this.getAuthToken()
     const headers: HeadersInit = {
-      "Content-Type": "application/json",
+      // Don't set Content-Type for FormData requests
       ...options.headers,
     }
 
@@ -77,6 +91,9 @@ export class ApiClient {
     return this.request<T>(endpoint, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
+      headers: {
+        "Content-Type": "application/json",
+      },
     })
   }
 
@@ -84,6 +101,23 @@ export class ApiClient {
     return this.request<T>(endpoint, {
       method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+  }
+
+  static async postFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: "POST",
+      body: formData,
+    })
+  }
+
+  static async putFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: "PUT",
+      body: formData,
     })
   }
 

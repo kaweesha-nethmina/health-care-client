@@ -1,3 +1,43 @@
+# Doctor API Update Documentation
+
+## Overview
+This document tracks the changes to the Doctor API endpoint and related frontend implementations.
+
+## API Endpoint
+- **URL**: `GET /patients/doctors`
+- **Description**: Retrieve all doctors in the system
+- **Headers**: `Authorization: Bearer <token>`
+
+## Latest API Response Format
+```json
+[
+  {
+    "id": 1,
+    "user_id": 3,
+    "name": "John Doe",
+    "email": "12desimain@gmail.com",
+    "specialty": "Cardiology",
+    "qualification": "MD, Board Certified",
+    "schedule": "Monday-Sunday: 9AM-5PM"
+  }
+]
+```
+
+## Fields Description
+- `id`: Doctor's unique identifier
+- `user_id`: Associated user ID
+- `name`: Doctor's full name
+- `email`: Doctor's email address
+- `specialty`: Doctor's medical specialty (can be null)
+- `qualification`: Doctor's qualifications (can be null)
+- `schedule`: Doctor's working schedule (can be null)
+
+## Implementation Notes
+1. All fields except `id` and `user_id` can potentially be null
+2. The frontend implementation handles null values gracefully
+3. Search functionality includes name, specialty, and qualification fields
+4. The Doctor interface in both the service layer and component has been updated to reflect this structure
+
 # Doctor API Update
 
 This document summarizes the update to match the actual API response format for the doctors endpoint.
