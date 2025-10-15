@@ -16,6 +16,18 @@ export interface PatientProfile {
   updated_at: string
 }
 
+// User interface for nested user data
+export interface User {
+  name: string
+}
+
+// Doctors interface for nested doctors data
+export interface Doctors {
+  users: User
+  user_id: number
+  specialty: string
+}
+
 // Appointment interface
 export interface Appointment {
   id: number
@@ -23,18 +35,32 @@ export interface Appointment {
   doctor_id: number
   appointment_date: string
   status: string
+  location?: string
   created_at: string
   updated_at: string
+  doctors?: Doctors
+  doctor_name?: string
+  doctor_location?: string
+}
+
+// Doctor information in medical records
+export interface MedicalRecordDoctor {
+  user_id: number
+  users?: {
+    name: string
+  }
 }
 
 // Doctor interface
 export interface Doctor {
   id: number
   user_id: number
-  specialty: string
-  qualification: string
-  schedule: string
-  // Note: This matches the actual API response format
+  name: string
+  email: string
+  profile_picture_url?: string | null
+  specialty: string | null
+  qualification: string | null
+  schedule: string | null
 }
 
 // Insurance Provider interface
@@ -57,6 +83,7 @@ export interface PatientMedicalRecord {
   prescriptions: string
   record_date: string
   updated_at: string
+  doctors?: MedicalRecordDoctor
 }
 
 export class PatientService {
@@ -71,13 +98,24 @@ export class PatientService {
   }
 
   // Book appointment
-  static async bookAppointment(data: { doctor_id: number; appointment_date: string; customer_name?: string; customer_phone?: string }): Promise<ApiResponse<Appointment>> {
+  static async bookAppointment(data: { 
+    doctor_id: number; 
+    appointment_date: string; 
+    customer_name?: string; 
+    customer_phone?: string;
+    location?: string;
+  }): Promise<ApiResponse<Appointment>> {
     return api.post<Appointment>("/patients/appointments", data)
   }
 
   // Get appointment history
   static async getAppointmentHistory(): Promise<ApiResponse<Appointment[]>> {
     return api.get<Appointment[]>("/patients/appointments")
+  }
+
+  // Delete appointment
+  static async deleteAppointment(appointmentId: number): Promise<ApiResponse<void>> {
+    return api.delete<void>(`/patients/appointments/${appointmentId}`)
   }
 
   // Get medical records
