@@ -42,9 +42,8 @@ const getNavigationForRole = (role: UserRole) => {
       { name: "Doctors", href: "/patient/doctors", icon: Users },
       { name: "Appointments", href: "/patient/appointments", icon: Calendar },
       { name: "Medical Records", href: "/patient/medical-records", icon: FileText },
-      { name: "Billing", href: "/patient/billing", icon: CreditCard },
-      { name: "Insurance", href: "/patient/insurance", icon: Shield },
-      { name: "Insurance Providers", href: "/patient/insurance/providers", icon: Shield },
+      // Removed Billing section as requested
+      // Removed Insurance and Insurance Providers sections as requested
       { name: "Profile", href: "/patient/profile", icon: User },
     ],
     doctor: [

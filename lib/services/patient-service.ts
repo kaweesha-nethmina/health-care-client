@@ -86,6 +86,20 @@ export interface PatientMedicalRecord {
   doctors?: MedicalRecordDoctor
 }
 
+// Vital signs interface
+export interface VitalSign {
+  id: number
+  patient_id: number
+  nurse_id: number
+  vital_signs: string
+  recorded_at: string
+  created_at: string
+  updated_at: string
+  users?: {
+    name: string
+  }
+}
+
 export class PatientService {
   // Get patient profile
   static async getProfile(): Promise<ApiResponse<PatientProfile>> {
@@ -121,6 +135,11 @@ export class PatientService {
   // Get medical records
   static async getMedicalRecords(): Promise<ApiResponse<PatientMedicalRecord[]>> {
     return api.get<PatientMedicalRecord[]>("/patients/medical-records")
+  }
+
+  // Get vital signs
+  static async getVitalSigns(): Promise<ApiResponse<VitalSign[]>> {
+    return api.get<VitalSign[]>("/patients/vital-signs")
   }
 
   // Get all doctors

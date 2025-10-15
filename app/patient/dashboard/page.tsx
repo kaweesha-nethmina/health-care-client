@@ -9,35 +9,71 @@ import { Calendar, FileText, Heart, Activity, Clock, MapPin, User, Plus } from "
 import Link from "next/link"
 import { PatientService } from "@/lib/services"
 import { useAuth } from "@/contexts/auth-context"
+import type { ApiResponse } from "@/lib/api"
 
 // Types for our data
 interface Appointment {
   id: number
+  patient_id: number
   doctor_id: number
-  doctor_name?: string
-  doctor_specialty?: string
   appointment_date: string
   status: string
-  created_at?: string
-  updated_at?: string
+  location?: string
+  created_at: string
+  updated_at: string
+  doctors?: {
+    users: {
+      name: string
+    }
+    user_id: number
+    specialty: string
+  }
+  doctor_name?: string
+  doctor_location?: string
+}
+
+interface MedicalRecordDoctor {
+  user_id: number
+  users?: {
+    name: string
+  }
 }
 
 interface MedicalRecord {
   id: number
   patient_id: number
   doctor_id: number
-  doctor_name?: string
   diagnosis: string
   treatment_plan: string
   prescriptions: string
   record_date: string
-  updated_at?: string
+  updated_at: string
+  doctors?: MedicalRecordDoctor
+}
+
+interface VitalSign {
+  id: number
+  patient_id: number
+  nurse_id: number
+  vital_signs: string
+  recorded_at: string
+  created_at: string
+  updated_at: string
+  users?: {
+    name: string
+  }
+}
+
+// Type guard to check if response has data property
+function isApiResponse<T>(response: T | ApiResponse<T>): response is ApiResponse<T> {
+  return (response as ApiResponse<T>).data !== undefined
 }
 
 export default function PatientDashboard() {
   const { user } = useAuth()
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
   const [recentRecords, setRecentRecords] = useState<MedicalRecord[]>([])
+  const [vitalSigns, setVitalSigns] = useState<VitalSign[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,9 +87,10 @@ export default function PatientDashboard() {
         
         // Fetch appointments
         const appointmentResponse = await PatientService.getAppointmentHistory()
-        if (appointmentResponse.data) {
+        const appointmentsData = isApiResponse(appointmentResponse) ? appointmentResponse.data : appointmentResponse
+        if (appointmentsData && Array.isArray(appointmentsData)) {
           // Filter for upcoming appointments (you might want to adjust this logic)
-          const upcoming = appointmentResponse.data
+          const upcoming = appointmentsData
             .filter((apt: Appointment) => new Date(apt.appointment_date) > new Date())
             .slice(0, 2) // Limit to 2 for display
           setUpcomingAppointments(upcoming)
@@ -61,10 +98,28 @@ export default function PatientDashboard() {
         
         // Fetch medical records
         const recordResponse = await PatientService.getMedicalRecords()
-        if (recordResponse.data) {
+        const recordsData = isApiResponse(recordResponse) ? recordResponse.data : recordResponse
+        if (recordsData && Array.isArray(recordsData)) {
           // Get most recent records
-          const recent = recordResponse.data.slice(0, 2) // Limit to 2 for display
+          const recent = recordsData.slice(0, 2) // Limit to 2 for display
           setRecentRecords(recent)
+        }
+        
+        // Fetch vital signs with error handling
+        try {
+          // Check if the method exists before calling it
+          if (typeof PatientService.getVitalSigns === 'function') {
+            const vitalResponse = await PatientService.getVitalSigns()
+            const vitalsData = isApiResponse(vitalResponse) ? vitalResponse.data : vitalResponse
+            if (vitalsData && Array.isArray(vitalsData)) {
+              // Get most recent vital signs
+              const recentVitals = vitalsData.slice(0, 3) // Limit to 3 for display
+              setVitalSigns(recentVitals)
+            }
+          }
+        } catch (vitalError) {
+          console.warn("Could not fetch vital signs:", vitalError)
+          // Continue without vital signs data
         }
       } catch (err) {
         console.error("Error fetching data:", err)
@@ -85,6 +140,28 @@ export default function PatientDashboard() {
   // Format time for display
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Parse vital signs data
+  const parseVitalSigns = (vitalSigns: string) => {
+    // Simple parser for vital signs like "BP: 120/80, HR: 72, Temp: 98.6°F"
+    const pairs = vitalSigns.split(',').map(pair => pair.trim())
+    const parsed: Record<string, string> = {}
+    
+    pairs.forEach(pair => {
+      const [key, value] = pair.split(':').map(part => part.trim())
+      if (key && value) {
+        parsed[key] = value
+      }
+    })
+    
+    return parsed
+  }
+
+  // Extract specific vital values
+  const getVitalValue = (vitalSigns: string, key: string) => {
+    const parsed = parseVitalSigns(vitalSigns)
+    return parsed[key] || '--'
   }
 
   if (loading) {
@@ -140,7 +217,7 @@ export default function PatientDashboard() {
               <Calendar className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <Link href="/patient/appointments/book">
+              <Link href="/patient/doctors">
                 <Button variant="link" className="p-0 h-auto text-primary">
                   Schedule Now
                 </Button>
@@ -164,13 +241,13 @@ export default function PatientDashboard() {
 
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Prescriptions</CardTitle>
-              <Heart className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-medium">Find Doctors</CardTitle>
+              <User className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <Link href="/patient/prescriptions">
+              <Link href="/patient/doctors">
                 <Button variant="link" className="p-0 h-auto text-primary">
-                  View All
+                  Browse
                 </Button>
               </Link>
             </CardContent>
@@ -189,59 +266,108 @@ export default function PatientDashboard() {
           </Card>
         </div>
 
-        {/* Health Stats - Kept as static for now since API doesn't provide this data */}
+        {/* Health Stats */}
         <Card>
           <CardHeader>
             <CardTitle>Health Statistics</CardTitle>
             <CardDescription>Your latest vital signs</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Blood Pressure</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold">
-                    --<span className="text-sm font-normal text-muted-foreground ml-1">mmHg</span>
-                  </p>
+            {vitalSigns.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Blood Pressure</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      {getVitalValue(vitalSigns[0].vital_signs, 'BP')}<span className="text-sm font-normal text-muted-foreground ml-1">mmHg</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Latest reading
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                  Not recorded
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Heart Rate</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold">
-                    --<span className="text-sm font-normal text-muted-foreground ml-1">bpm</span>
-                  </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Heart Rate</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      {getVitalValue(vitalSigns[0].vital_signs, 'HR')}<span className="text-sm font-normal text-muted-foreground ml-1">bpm</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Latest reading
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                  Not recorded
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Weight</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold">
-                    --<span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
-                  </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Temperature</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      {getVitalValue(vitalSigns[0].vital_signs, 'Temp')}<span className="text-sm font-normal text-muted-foreground ml-1">°F</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Latest reading
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                  Not recorded
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Temperature</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold">
-                    --<span className="text-sm font-normal text-muted-foreground ml-1">°F</span>
-                  </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Recorded By</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-lg font-bold">
+                      {vitalSigns[0].users?.name || "Nurse"}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    {formatDate(vitalSigns[0].recorded_at)}
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
-                  Not recorded
-                </Badge>
               </div>
-            </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Blood Pressure</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      --<span className="text-sm font-normal text-muted-foreground ml-1">mmHg</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Not recorded
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Heart Rate</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      --<span className="text-sm font-normal text-muted-foreground ml-1">bpm</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Not recorded
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Weight</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      --<span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Not recorded
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Temperature</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold">
+                      --<span className="text-sm font-normal text-muted-foreground ml-1">°F</span>
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    Not recorded
+                  </Badge>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -254,7 +380,7 @@ export default function PatientDashboard() {
                 <CardDescription>Your scheduled visits</CardDescription>
               </div>
               <Button asChild size="sm">
-                <Link href="/patient/appointments/book">
+                <Link href="/patient/doctors">
                   <Plus className="h-4 w-4 mr-2" />
                   Book
                 </Link>
@@ -273,12 +399,16 @@ export default function PatientDashboard() {
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold">{appointment.doctor_name || "Doctor"}</p>
-                      <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
+                      <p className="font-semibold">
+                        {appointment.doctors?.users?.name || appointment.doctor_name || "Doctor"}
+                      </p>
+                      <Badge variant={appointment.status === "booked" ? "default" : "secondary"}>
                         {appointment.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{appointment.doctor_specialty || "Specialty"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {appointment.doctors?.specialty || "Specialty"}
+                    </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -291,7 +421,7 @@ export default function PatientDashboard() {
                     </div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
-                      Location not specified
+                      {appointment.location || appointment.doctor_location || "Location not specified"}
                     </p>
                   </div>
                 </div>
@@ -301,7 +431,7 @@ export default function PatientDashboard() {
                   <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No upcoming appointments</p>
                   <Button asChild variant="link" className="mt-2">
-                    <Link href="/patient/appointments/book">Book an appointment</Link>
+                    <Link href="/patient/doctors">Book an appointment</Link>
                   </Button>
                 </div>
               )}
@@ -329,7 +459,9 @@ export default function PatientDashboard() {
                   </div>
                   <div className="flex-1 space-y-1">
                     <p className="font-semibold">{record.diagnosis || "Medical Record"}</p>
-                    <p className="text-sm text-muted-foreground">{record.doctor_name || "Doctor"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {record.doctors?.users?.name || "Doctor"}
+                    </p>
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-sm text-muted-foreground">{formatDate(record.record_date)}</span>
                       <Badge variant="outline">Record</Badge>
