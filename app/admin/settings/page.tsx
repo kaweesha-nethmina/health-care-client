@@ -9,14 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Activity, Users, Calendar, FileText, Settings, Save } from "lucide-react"
 
-const navigation = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: Activity },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Appointments", href: "/admin/appointments", icon: Calendar },
-  { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-]
-
 export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [settings, setSettings] = useState({
@@ -36,7 +28,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="admin">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>

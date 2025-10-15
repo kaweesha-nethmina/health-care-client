@@ -7,14 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, Users, FileText, Settings, Clock, User, Activity } from "lucide-react"
 import Link from "next/link"
 
-const navigation = [
-  { name: "Dashboard", href: "/doctor/dashboard", icon: Activity },
-  { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
-  { name: "Patients", href: "/doctor/patients", icon: Users },
-  { name: "Medical Records", href: "/doctor/medical-records", icon: FileText },
-  { name: "Profile", href: "/doctor/profile", icon: Settings },
-]
-
 const todayAppointments = [
   {
     id: 1,
@@ -96,7 +88,7 @@ const stats = [
 
 export default function DoctorDashboard() {
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="doctor">
       <div className="space-y-6">
         {/* Welcome Section */}
         <div>

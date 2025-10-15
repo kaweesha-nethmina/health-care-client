@@ -13,14 +13,6 @@ import { Activity, Users, Calendar, FileText, Settings, ArrowLeft, UserPlus } fr
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-const navigation = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: Activity },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Appointments", href: "/admin/appointments", icon: Calendar },
-  { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-]
-
 export default function NewUserPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -49,7 +41,7 @@ export default function NewUserPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="admin">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>

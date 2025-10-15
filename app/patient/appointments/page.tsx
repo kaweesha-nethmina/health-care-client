@@ -10,13 +10,6 @@ import { Calendar, Activity, FileText, User, Plus, Clock, MapPin, MoreVertical }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 
-const navigation = [
-  { name: "Dashboard", href: "/patient/dashboard", icon: Activity },
-  { name: "Appointments", href: "/patient/appointments", icon: Calendar },
-  { name: "Medical Records", href: "/patient/medical-records", icon: FileText },
-  { name: "Profile", href: "/patient/profile", icon: User },
-]
-
 const appointments = [
   {
     id: 1,
@@ -82,7 +75,7 @@ export default function AppointmentsPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="patient">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

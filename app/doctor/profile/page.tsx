@@ -11,14 +11,6 @@ import { Calendar, Users, FileText, Settings, Save, Activity } from "lucide-reac
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 
-const navigation = [
-  { name: "Dashboard", href: "/doctor/dashboard", icon: Activity },
-  { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
-  { name: "Patients", href: "/doctor/patients", icon: Users },
-  { name: "Medical Records", href: "/doctor/medical-records", icon: FileText },
-  { name: "Profile", href: "/doctor/profile", icon: Settings },
-]
-
 export default function DoctorProfilePage() {
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
@@ -52,7 +44,7 @@ export default function DoctorProfilePage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="doctor">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>

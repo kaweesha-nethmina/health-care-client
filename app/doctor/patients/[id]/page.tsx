@@ -9,14 +9,6 @@ import { Calendar, Users, FileText, Settings, Activity, ArrowLeft, Phone, Mail, 
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-const navigation = [
-  { name: "Dashboard", href: "/doctor/dashboard", icon: Activity },
-  { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
-  { name: "Patients", href: "/doctor/patients", icon: Users },
-  { name: "Medical Records", href: "/doctor/medical-records", icon: FileText },
-  { name: "Profile", href: "/doctor/profile", icon: Settings },
-]
-
 // Mock patient data
 const patient = {
   id: "P001",
@@ -73,7 +65,7 @@ const appointments = [
 
 export default function PatientDetailPage() {
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="doctor">
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>

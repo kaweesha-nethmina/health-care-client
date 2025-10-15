@@ -9,13 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Calendar, Activity, FileText, User, Search, Download, Eye } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const navigation = [
-  { name: "Dashboard", href: "/patient/dashboard", icon: Activity },
-  { name: "Appointments", href: "/patient/appointments", icon: Calendar },
-  { name: "Medical Records", href: "/patient/medical-records", icon: FileText },
-  { name: "Profile", href: "/patient/profile", icon: User },
-]
-
 const medicalRecords = [
   {
     id: 1,
@@ -78,7 +71,7 @@ export default function MedicalRecordsPage() {
   )
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="patient">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-balance">Medical Records</h1>

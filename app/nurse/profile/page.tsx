@@ -10,13 +10,6 @@ import { Activity, Users, ClipboardList, Settings, Save } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 
-const navigation = [
-  { name: "Dashboard", href: "/nurse/dashboard", icon: Activity },
-  { name: "Patients", href: "/nurse/patients", icon: Users },
-  { name: "Care Records", href: "/nurse/care-records", icon: ClipboardList },
-  { name: "Profile", href: "/nurse/profile", icon: Settings },
-]
-
 export default function NurseProfilePage() {
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
@@ -48,7 +41,7 @@ export default function NurseProfilePage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="nurse">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>

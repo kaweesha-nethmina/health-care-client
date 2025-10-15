@@ -7,13 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, FileText, Heart, Activity, Clock, MapPin, User, Plus } from "lucide-react"
 import Link from "next/link"
 
-const navigation = [
-  { name: "Dashboard", href: "/patient/dashboard", icon: Activity },
-  { name: "Appointments", href: "/patient/appointments", icon: Calendar },
-  { name: "Medical Records", href: "/patient/medical-records", icon: FileText },
-  { name: "Profile", href: "/patient/profile", icon: User },
-]
-
 // Mock data
 const upcomingAppointments = [
   {
@@ -62,7 +55,7 @@ const healthStats = [
 
 export default function PatientDashboard() {
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="patient">
       <div className="space-y-6">
         {/* Welcome Section */}
         <div>

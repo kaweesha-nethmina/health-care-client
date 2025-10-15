@@ -11,14 +11,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 
-const navigation = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: Activity },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Appointments", href: "/admin/appointments", icon: Calendar },
-  { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-]
-
 const users = [
   {
     id: 1,
@@ -101,7 +93,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="admin">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

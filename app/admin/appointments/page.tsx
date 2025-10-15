@@ -7,14 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Activity, Users, Calendar, FileText, Settings, Search } from "lucide-react"
 
-const navigation = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: Activity },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Appointments", href: "/admin/appointments", icon: Calendar },
-  { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-]
-
 const appointments = [
   {
     id: 1,
@@ -65,7 +57,7 @@ export default function AdminAppointmentsPage() {
   )
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="admin">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-balance">Appointments</h1>

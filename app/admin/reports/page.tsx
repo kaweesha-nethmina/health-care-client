@@ -5,14 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Activity, Users, Calendar, FileText, Settings, Download, TrendingUp } from "lucide-react"
 
-const navigation = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: Activity },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Appointments", href: "/admin/appointments", icon: Calendar },
-  { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-]
-
 const reports = [
   {
     id: 1,
@@ -46,7 +38,7 @@ const reports = [
 
 export default function AdminReportsPage() {
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="admin">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-balance">Reports & Analytics</h1>

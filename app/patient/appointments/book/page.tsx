@@ -17,13 +17,6 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-const navigation = [
-  { name: "Dashboard", href: "/patient/dashboard", icon: Activity },
-  { name: "Appointments", href: "/patient/appointments", icon: Calendar },
-  { name: "Medical Records", href: "/patient/medical-records", icon: FileText },
-  { name: "Profile", href: "/patient/profile", icon: User },
-]
-
 const doctors = [
   { id: 1, name: "Dr. Sarah Johnson", specialty: "Cardiologist" },
   { id: 2, name: "Dr. Michael Chen", specialty: "General Physician" },
@@ -66,7 +59,7 @@ export default function BookAppointmentPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="patient">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>

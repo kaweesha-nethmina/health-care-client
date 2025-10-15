@@ -7,13 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Activity, Users, ClipboardList, Settings, Heart, Thermometer, User, AlertCircle } from "lucide-react"
 import Link from "next/link"
 
-const navigation = [
-  { name: "Dashboard", href: "/nurse/dashboard", icon: Activity },
-  { name: "Patients", href: "/nurse/patients", icon: Users },
-  { name: "Care Records", href: "/nurse/care-records", icon: ClipboardList },
-  { name: "Profile", href: "/nurse/profile", icon: Settings },
-]
-
 const assignedPatients = [
   {
     id: 1,
@@ -91,7 +84,7 @@ const stats = [
 
 export default function NurseDashboard() {
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="nurse">
       <div className="space-y-6">
         {/* Welcome Section */}
         <div>

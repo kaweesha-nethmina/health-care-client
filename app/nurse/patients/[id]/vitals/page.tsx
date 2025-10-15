@@ -13,13 +13,6 @@ import { Activity, Users, ClipboardList, Settings, ArrowLeft, Save } from "lucid
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-const navigation = [
-  { name: "Dashboard", href: "/nurse/dashboard", icon: Activity },
-  { name: "Patients", href: "/nurse/patients", icon: Users },
-  { name: "Care Records", href: "/nurse/care-records", icon: ClipboardList },
-  { name: "Profile", href: "/nurse/profile", icon: Settings },
-]
-
 export default function RecordVitalsPage() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
@@ -46,7 +39,7 @@ export default function RecordVitalsPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation}>
+    <DashboardLayout role="nurse">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
