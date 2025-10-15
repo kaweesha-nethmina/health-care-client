@@ -100,7 +100,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src="/placeholder.svg" alt={user?.name} />
+                      <AvatarImage src={user?.profile_picture_url || "/placeholder.svg"} alt={user?.name} />
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {user?.name ? getInitials(user.name) : "U"}
                       </AvatarFallback>

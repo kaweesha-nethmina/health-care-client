@@ -1,122 +1,208 @@
-# API Integration Summary
+# Lifeline Healthcare System - API Integration Summary
 
-This document summarizes the changes made to fully integrate the Lifeline Smart Healthcare System frontend with the backend API.
+This document summarizes the API integration implementation for the Lifeline Smart Healthcare System client.
 
-## Changes Made
+## Overview
 
-### 1. Updated API Client (`lib/api.ts`)
+We have implemented a comprehensive service layer that integrates with all backend API endpoints as documented in the API specification. Each service is organized by user role and functionality area, with proper TypeScript typing for all data structures.
 
-- Changed the base URL from `/api` to `http://localhost:5000` to directly communicate with the backend
-- Maintained CORS handling for proper cross-origin requests
-- Kept existing error handling and response parsing logic
+## Service Structure
 
-### 2. Updated Authentication Context (`contexts/auth-context.tsx`)
+The API integration is organized into the following service files:
 
-- Updated the login method to use the correct `/auth/login` endpoint
-- Updated the register method to use the correct `/auth/register` endpoint
-- Ensured proper handling of API responses according to the backend documentation
-- Maintained automatic login after successful registration
+1. **Patient Service** (`patient-service.ts`) - Patient profile, appointments, medical records
+2. **Doctor Service** (`doctor-service.ts`) - Doctor profile, patient medical records, appointments
+3. **Nurse Service** (`nurse-service.ts`) - Patient care information
+4. **Staff Service** (`staff-service.ts`) - Patient check-in, patient information
+5. **Admin Service** (`admin-service.ts`) - User management, system configuration
+6. **Manager Service** (`manager-service.ts`) - Healthcare data, resource utilization
+7. **System Admin Service** (`system-admin-service.ts`) - System maintenance, logs, backups
+8. **Emergency Service** (`emergency-service.ts`) - Emergency cases, resources
+9. **Payment Service** (`payment-service.ts`) - Payment processing, history
+10. **Insurance Service** (`insurance-service.ts`) - Insurance verification, claims
+11. **Prescription Service** (`prescription-service.ts`) - Prescription management
+12. **Notification Service** (`notification-service.ts`) - User notifications
 
-### 3. Updated Next.js Configuration (`next.config.mjs`)
-
-- Removed complex rewrite rules that were causing conflicts
-- Added proper CORS headers to handle cross-origin requests
-- Simplified configuration for better maintainability
-
-## API Endpoints Integration
-
-All backend endpoints have been successfully integrated:
+## Key Features
 
 ### Authentication
-- `POST /auth/login` - User login with email and password
-- `POST /auth/register` - User registration with email, name, role, and password
+- Login and registration are already working correctly as per requirements
+- All services automatically include authentication tokens in requests
+- Proper error handling for authentication failures
 
-### Patients
-- `GET /patients/profile` - Retrieve patient profile information
-- `PUT /patients/profile` - Update patient profile information
-- `POST /patients/appointments` - Book a new appointment
-- `GET /patients/appointments` - Retrieve appointment history
-- `GET /patients/medical-records` - Retrieve medical records
+### Role-Based Access
+- Services are organized by user roles as defined in the API documentation
+- Each service only includes endpoints relevant to that role
+- Proper TypeScript interfaces for all data structures
 
-### Doctors
-- `GET /doctors/profile` - Retrieve doctor profile information
-- `PUT /doctors/profile` - Update doctor profile information
-- `GET /doctors/patients/:id/medical-records` - Retrieve patient medical records
-- `POST /doctors/patients/:id/medical-records` - Create new medical record
-- `GET /doctors/appointments` - Retrieve appointment schedule
+### Error Handling
+- Consistent error handling across all services
+- Proper typing for API responses
+- Network error detection and user-friendly messages
 
-### Nurses
-- `POST /nurses/patients/:id/care` - Update patient care information
-- `GET /nurses/patients/:id/care` - Retrieve patient care history
+### Data Validation
+- TypeScript interfaces for all request/response objects
+- Partial updates supported where appropriate
+- Type safety for all API interactions
 
-### Hospital Staff
-- `POST /staff/check-in/:id` - Patient check-in
-- `GET /staff/patients/:id` - Retrieve patient information
+## Usage Examples
 
-### Admin
-- `POST /admin/create-user` - Create new user
-- `POST /admin/configure-system` - Configure system settings
-- `GET /admin/users` - Retrieve all users
+### Patient Profile Update
+```typescript
+import { PatientService } from '@/lib/services'
 
-### Healthcare Managers
-- `GET /manager/data` - Retrieve healthcare data and analytics
-- `GET /manager/resources` - Retrieve resource utilization information
+const updatedProfile = await PatientService.updateProfile({
+  phone_number: '+1234567890',
+  address: '123 Main St, City, Country'
+})
+```
 
-### System Administrators
-- `POST /system-admin/system-maintenance` - Perform system maintenance
-- `GET /system-admin/logs` - Retrieve system logs
-- `POST /system-admin/backup` - Create system backup
+### Doctor Creating Medical Record
+```typescript
+import { DoctorService } from '@/lib/services'
 
-### Emergency Services
-- `POST /emergency/emergency` - Log emergency case
-- `POST /emergency/resources` - Create emergency resource
-- `GET /emergency/resources` - View available resources
-- `GET /emergency/cases` - Get all emergency cases
-- `PUT /emergency/cases/:id` - Update emergency case status
+const medicalRecord = await DoctorService.createMedicalRecord(patientId, {
+  diagnosis: 'Hypertension',
+  treatment_plan: 'Prescribed medication and lifestyle changes',
+  prescriptions: 'Lisinopril 10mg daily'
+})
+```
 
-### Payments
-- `POST /payments/process-payment` - Process payment
-- `GET /payments/payment-history/:patientId` - Get payment history
-- `GET /payments/:id` - Get payment by ID
+### Admin Creating New User
+```typescript
+import { AdminService } from '@/lib/services'
 
-### Insurance
-- `POST /insurance/verify-eligibility` - Verify insurance eligibility
-- `POST /insurance/process-claim` - Process insurance claim
-- `GET /insurance/providers` - Get insurance providers
-- `GET /insurance/claims/:patientId` - Get patient insurance claims
+const newUser = await AdminService.createUser({
+  email: 'dr.smith@example.com',
+  name: 'Dr. Smith',
+  role: 'doctor',
+  password: 'doctorPassword123'
+})
+```
 
-### Prescriptions
-- `POST /prescriptions` - Create prescription
-- `GET /prescriptions/medical-record/:medicalRecordId` - Get prescriptions by medical record
-- `PUT /prescriptions/:id` - Update prescription
-- `DELETE /prescriptions/:id` - Delete prescription
+## Implementation Notes
 
-### Notifications
-- `GET /notifications` - Get user notifications
-- `POST /notifications` - Create notification
-- `PUT /notifications/:id/status` - Update notification status
-- `PUT /notifications/:id/read` - Mark notification as read
-- `DELETE /notifications/:id` - Delete notification
+1. **No Changes to Login**: As requested, the login functionality has not been modified since it's already working correctly.
 
-## Testing
+2. **Consistent API Client**: All services use the existing `api` client from `@/lib/api` which handles:
+   - Authentication token management
+   - Request/response processing
+   - Error handling
+   - CORS configuration
 
-The integration has been tested with:
-- Successful user registration
-- Successful user login
-- Proper JWT token generation and handling
-- Correct user role-based redirection
+3. **Type Safety**: All services include proper TypeScript interfaces for:
+   - Request payloads
+   - Response objects
+   - Error responses
 
-## Usage Instructions
+4. **Path Parameters**: Services properly handle path parameters (e.g., patient IDs, case IDs) as required by the API.
 
-1. Ensure the backend server is running on `http://localhost:5000`
-2. Start the frontend development server with `npm run dev`
-3. Access the application at `http://localhost:3000`
-4. Register a new user or log in with existing credentials
-5. The application will automatically redirect based on user role
+5. **Export Convenience**: All services are exported through `@/lib/services/index.ts` for easy imports.
 
-## Future Considerations
+## Available Services
 
-- Implement additional API endpoints as needed for full application functionality
-- Add comprehensive error handling for all API calls
-- Implement loading states for better user experience
-- Add request caching where appropriate to improve performance
+### PatientService
+- `getProfile()` - Retrieve authenticated patient's profile
+- `updateProfile(data)` - Update patient profile information
+- `bookAppointment(data)` - Book a new appointment
+- `getAppointmentHistory()` - Get patient's appointment history
+- `getMedicalRecords()` - Get patient's medical records
+
+### DoctorService
+- `getProfile()` - Retrieve authenticated doctor's profile
+- `updateProfile(data)` - Update doctor profile information
+- `getPatientMedicalRecords(patientId)` - Get medical records for a patient
+- `createMedicalRecord(patientId, data)` - Create medical record for a patient
+- `getAppointmentSchedule()` - Get doctor's appointment schedule
+
+### NurseService
+- `updatePatientCare(patientId, data)` - Update patient care information
+- `getPatientCareHistory(patientId)` - Get patient care history
+
+### StaffService
+- `checkInPatient(patientId, data)` - Check in a patient
+- `getPatientInfo(patientId)` - Get patient information
+
+### AdminService
+- `createUser(data)` - Create a new user
+- `configureSystem(data)` - Configure system settings
+- `getAllUsers()` - Get all users in the system
+
+### ManagerService
+- `getData()` - Get healthcare data and analytics
+- `getResources()` - Get resource utilization information
+
+### SystemAdminService
+- `performMaintenance(data)` - Perform system maintenance
+- `getLogs()` - Get system logs
+- `createBackup(data)` - Create system backup
+
+### EmergencyService
+- `logEmergencyCase(data)` - Log a new emergency case
+- `createResource(data)` - Create a new emergency resource
+- `getAvailableResources()` - Get all emergency resources
+- `getAllCases()` - Get all emergency cases
+- `updateCaseStatus(caseId, data)` - Update emergency case status
+
+### PaymentService
+- `processPayment(data)` - Process a payment
+- `getPaymentHistory(patientId)` - Get payment history for a patient
+- `getPaymentById(paymentId)` - Get a specific payment by ID
+
+### InsuranceService
+- `verifyEligibility(data)` - Verify insurance eligibility
+- `processClaim(data)` - Process an insurance claim
+- `getProviders()` - Get all insurance providers
+- `getPatientClaims(patientId)` - Get insurance claims for a patient
+
+### PrescriptionService
+- `createPrescription(data)` - Create a new prescription
+- `getPrescriptionsByMedicalRecord(medicalRecordId)` - Get prescriptions for a medical record
+- `updatePrescription(id, data)` - Update a prescription
+- `deletePrescription(id)` - Delete a prescription
+
+### NotificationService
+- `getUserNotifications()` - Get notifications for authenticated user
+- `createNotification(data)` - Create a new notification
+- `updateNotificationStatus(id, data)` - Update notification status
+- `markAsRead(id)` - Mark notification as read
+- `deleteNotification(id)` - Delete a notification
+
+## Integration with Existing Code
+
+The services are designed to integrate seamlessly with the existing codebase:
+- Use the same authentication mechanism as the existing login system
+- Follow the same error handling patterns
+- Use the existing API client infrastructure
+- Maintain consistency with existing coding patterns
+
+## Usage in Components
+
+To use any service in a component:
+
+```typescript
+'use client'
+
+import { PatientService } from '@/lib/services'
+
+export default function PatientProfile() {
+  const [profile, setProfile] = useState(null)
+  
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await PatientService.getProfile()
+        setProfile(response.data)
+      } catch (error) {
+        console.error('Failed to fetch profile:', error)
+      }
+    }
+    
+    fetchProfile()
+  }, [])
+  
+  // Render profile data
+}
+```
+
+This implementation provides a clean, type-safe, and organized way to interact with all backend API endpoints while maintaining consistency with the existing codebase.

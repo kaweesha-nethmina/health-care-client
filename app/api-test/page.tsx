@@ -1,54 +1,77 @@
 "use client"
 
-import { useState } from "react"
-import { ApiClient } from "@/lib/api"
+import { useState, useEffect } from "react"
+import { PatientService } from "@/lib/services"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function ApiTestPage() {
-  const [testResult, setTestResult] = useState<string>("")
+  const { user, isAuthenticated } = useAuth()
+  const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const testApiConnection = async () => {
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "patient") {
+      fetchPatientProfile()
+    }
+  }, [isAuthenticated, user])
+
+  const fetchPatientProfile = async () => {
     setLoading(true)
-    setTestResult("Testing API connection...")
-    
+    setError(null)
     try {
-      // Test a simple endpoint (this will likely fail without auth, but we can see if the connection works)
-      const response = await ApiClient.get("/auth/login")
-      setTestResult(`API Connection successful: ${JSON.stringify(response)}`)
-    } catch (error: any) {
-      // We expect this to fail since we're not providing credentials, but we can see if the connection works
-      if (error.message.includes("Failed to fetch")) {
-        setTestResult("Error: Could not connect to API. Please ensure the backend is running on http://localhost:5000")
-      } else {
-        setTestResult(`API Connection working. Authentication required: ${error.message}`)
-      }
+      const response = await PatientService.getProfile()
+      setProfile(response)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch profile")
+      console.error("API Error:", err)
     } finally {
       setLoading(false)
     }
   }
 
+  if (!isAuthenticated) {
+    return <div className="p-4">Please log in to test API integration</div>
+  }
+
+  if (user?.role !== "patient") {
+    return <div className="p-4">This test is only available for patients</div>
+  }
+
   return (
-    <div className="min-h-screen p-8">
+    <div className="p-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">API Integration Test</h1>
-      <button 
-        onClick={testApiConnection} 
-        disabled={loading}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
-      >
-        {loading ? "Testing..." : "Test API Connection"}
-      </button>
-      <div className="mt-4 p-4 bg-gray-100 rounded">
-        <h2 className="text-xl font-semibold mb-2">Test Result:</h2>
-        <p className="whitespace-pre-wrap">{testResult}</p>
+      
+      <div className="mb-4">
+        <button 
+          onClick={fetchPatientProfile}
+          disabled={loading}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+        >
+          {loading ? "Loading..." : "Fetch Patient Profile"}
+        </button>
       </div>
-      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
-        <h3 className="font-semibold mb-2">Next Steps:</h3>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Ensure your backend is running on port 5000</li>
-          <li>Test the login functionality at <a href="/login" className="text-blue-600 hover:underline">/login</a></li>
-          <li>Test the registration functionality at <a href="/register" className="text-blue-600 hover:underline">/register</a></li>
-        </ul>
-      </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {profile && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Patient Profile</h2>
+          <pre className="bg-gray-100 p-4 rounded overflow-auto">
+            {JSON.stringify(profile, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {!profile && !loading && !error && (
+        <div className="bg-gray-100 border border-gray-300 text-gray-700 px-4 py-3 rounded">
+          Click the button above to fetch your patient profile
+        </div>
+      )}
     </div>
   )
 }
