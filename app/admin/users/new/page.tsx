@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,14 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, Mail, Lock, Badge } from "lucide-react"
-import { AdminService } from "@/lib/services"
-import { useAuth } from "@/contexts/auth-context"
+import { AdminService, AdminUser } from "@/lib/services/admin-service"
 import { useRouter } from "next/navigation"
 
 export default function CreateUserPage() {
-  const { user } = useAuth()
   const router = useRouter()
-  
+  const [users, setUsers] = useState<AdminUser[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -27,12 +25,28 @@ export default function CreateUserPage() {
     role: "",
   })
 
+  // Fetch all users to prevent duplicate emails
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const res = await AdminService.getAllUsers()
+      if (res.success && res.data) setUsers(res.data)
+    }
+    fetchUsers()
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     setIsSubmitting(true)
     setError(null)
-    
+    setSuccess(false)
+
+    // Frontend check for duplicate email
+    if (users.some(u => u.email.toLowerCase() === formData.email.toLowerCase())) {
+      setError("This email is already registered.")
+      setIsSubmitting(false)
+      return
+    }
+
     try {
       const response = await AdminService.createUser({
         name: formData.name,
@@ -41,7 +55,9 @@ export default function CreateUserPage() {
         role: formData.role,
       })
       
-      if (response) {
+      if (response && response.error && response.error.includes("duplicate key value")) {
+        setError("This email address is already registered in the system.");
+      } else if (response) {
         setSuccess(true)
         // Reset form
         setFormData({
@@ -50,7 +66,6 @@ export default function CreateUserPage() {
           password: "",
           role: "",
         })
-        
         // Redirect to users page after 2 seconds
         setTimeout(() => {
           router.push("/admin/users")
@@ -95,6 +110,8 @@ export default function CreateUserPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -103,13 +120,14 @@ export default function CreateUserPage() {
                     id="name"
                     placeholder="Enter full name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="pl-10"
                     required
                   />
                 </div>
               </div>
-              
+
+              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
@@ -119,13 +137,14 @@ export default function CreateUserPage() {
                     type="email"
                     placeholder="Enter email address"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={e => setFormData({ ...formData, email: e.target.value })}
                     className="pl-10"
                     required
                   />
                 </div>
               </div>
-              
+
+              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -135,20 +154,22 @@ export default function CreateUserPage() {
                     type="password"
                     placeholder="Enter password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
                     className="pl-10"
                     required
                   />
                 </div>
               </div>
-              
+
+              {/* Role */}
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
                 <div className="relative">
                   <Badge className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Select 
-                    value={formData.role} 
-                    onValueChange={(value) => setFormData({ ...formData, role: value })}
+                  <Select
+                    value={formData.role}
+                    onValueChange={value => setFormData({ ...formData, role: value })}
+                    required
                   >
                     <SelectTrigger className="pl-10">
                       <SelectValue placeholder="Select a role" />
@@ -166,13 +187,14 @@ export default function CreateUserPage() {
                   </Select>
                 </div>
               </div>
-              
+
+              {/* Buttons */}
               <div className="flex gap-3">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Creating..." : "Create User"}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => router.push("/admin/users")}
                 >
