@@ -43,6 +43,14 @@ export interface Appointment {
   doctor_location?: string
 }
 
+// Doctor information in medical records
+export interface MedicalRecordDoctor {
+  user_id: number
+  users?: {
+    name: string
+  }
+}
+
 // Doctor interface
 export interface Doctor {
   id: number
@@ -75,6 +83,7 @@ export interface PatientMedicalRecord {
   prescriptions: string
   record_date: string
   updated_at: string
+  doctors?: MedicalRecordDoctor
 }
 
 export class PatientService {
