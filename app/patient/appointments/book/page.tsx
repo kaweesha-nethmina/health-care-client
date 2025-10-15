@@ -28,6 +28,7 @@ export default function BookAppointmentPage() {
     appointmentTime: "",
     customerName: user?.name || "",
     customerPhone: "",
+    location: "",
     notes: "",
   })
 
@@ -55,6 +56,7 @@ export default function BookAppointmentPage() {
         appointment_date: dateTime.toISOString(),
         customer_name: formData.customerName,
         customer_phone: formData.customerPhone,
+        location: formData.location,
       })
       
       if (response) {
@@ -66,6 +68,7 @@ export default function BookAppointmentPage() {
           appointmentTime: "",
           customerName: user?.name || "",
           customerPhone: "",
+          location: "",
           notes: "",
         })
         
@@ -190,6 +193,16 @@ export default function BookAppointmentPage() {
                       required
                     />
                   </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    placeholder="Enter appointment location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
                 </div>
               </div>
               

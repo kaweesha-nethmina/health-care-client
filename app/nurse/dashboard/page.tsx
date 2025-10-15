@@ -1,224 +1,312 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Activity, Users, ClipboardList, Settings, Heart, Thermometer, User, AlertCircle } from "lucide-react"
-import Link from "next/link"
+import { 
+  Users, 
+  Calendar, 
+  Activity, 
+  HeartPulse,
+  FileText,
+  Stethoscope
+} from "lucide-react"
+import { NurseService } from "@/lib/services"
+import { useAuth } from "@/contexts/auth-context"
+import type { ApiResponse } from "@/lib/api"
 
-const assignedPatients = [
-  {
-    id: 1,
-    name: "John Doe",
-    room: "301",
-    condition: "Post-surgery recovery",
-    priority: "high",
-    lastVitals: "2 hours ago",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    room: "305",
-    condition: "Diabetes management",
-    priority: "medium",
-    lastVitals: "1 hour ago",
-  },
-  {
-    id: 3,
-    name: "Robert Johnson",
-    room: "310",
-    condition: "Asthma monitoring",
-    priority: "low",
-    lastVitals: "30 minutes ago",
-  },
-]
+// Interfaces matching actual API response structure
+interface ActualNursePatient {
+  id: number
+  user_id: number
+  date_of_birth: string | null
+  gender: string | null
+  phone_number: string | null
+  address: string | null
+  insurance_details: string | null
+  medical_history: string | null
+  emergency_contact: string | null
+  created_at: string
+  updated_at: string
+  user?: {
+    id: number
+    email: string
+    name: string
+    role: string
+    profile_picture_url: string | null
+    created_at: string
+    updated_at: string
+  }
+  users?: {
+    name: string
+    email: string
+  }
+}
 
-const recentActivities = [
-  {
-    id: 1,
-    patient: "John Doe",
-    action: "Vital signs recorded",
-    time: "10 minutes ago",
-  },
-  {
-    id: 2,
-    patient: "Jane Smith",
-    action: "Medication administered",
-    time: "45 minutes ago",
-  },
-  {
-    id: 3,
-    patient: "Robert Johnson",
-    action: "Care notes updated",
-    time: "1 hour ago",
-  },
-]
+interface ActualNurseAppointment {
+  id: number
+  patient_id: number
+  doctor_id: number
+  appointment_date: string
+  status: string
+  location: string | null
+  created_at: string
+  updated_at: string
+  patient?: {
+    user: {
+      name: string
+    }
+  }
+  patients?: {
+    user_id: number
+  }
+  doctor?: {
+    user: {
+      name: string
+    }
+  }
+  doctors?: {
+    user_id: number
+  }
+}
 
-const stats = [
-  {
-    title: "Assigned Patients",
-    value: "12",
-    icon: Users,
-    description: "Active today",
-  },
-  {
-    title: "Vitals Pending",
-    value: "5",
-    icon: Heart,
-    description: "Need recording",
-  },
-  {
-    title: "Medications Due",
-    value: "8",
-    icon: AlertCircle,
-    description: "Next 2 hours",
-  },
-  {
-    title: "Care Records",
-    value: "24",
-    icon: ClipboardList,
-    description: "Updated today",
-  },
-]
+// Type guard to check if response has data property
+function isApiResponse<T>(response: T | ApiResponse<T>): response is ApiResponse<T> {
+  return (response as ApiResponse<T>).data !== undefined
+}
 
-export default function NurseDashboard() {
+export default function NurseDashboardPage() {
+  const { user } = useAuth()
+  const [patients, setPatients] = useState<ActualNursePatient[]>([])
+  const [appointments, setAppointments] = useState<ActualNurseAppointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Fetch patients
+        const patientsResponse = await NurseService.getAllPatients()
+        const patientsData = isApiResponse(patientsResponse) ? patientsResponse.data : patientsResponse
+        if (patientsData && Array.isArray(patientsData)) {
+          setPatients(patientsData.slice(0, 5)) // Show only first 5 patients
+        }
+        
+        // Fetch appointments
+        const appointmentsResponse = await NurseService.getAllAppointments()
+        const appointmentsData = isApiResponse(appointmentsResponse) ? appointmentsResponse.data : appointmentsResponse
+        if (appointmentsData && Array.isArray(appointmentsData)) {
+          setAppointments(appointmentsData.slice(0, 5)) // Show only first 5 appointments
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err)
+        setError("Failed to load dashboard data. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user])
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  // Get status badge variant
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "booked":
+        return "default"
+      case "completed":
+        return "secondary"
+      case "cancelled":
+        return "destructive"
+      case "rescheduled":
+        return "outline"
+      default:
+        return "default"
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="nurse">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Nurse Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Overview of your patients and appointments</p>
+          </div>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="nurse">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Nurse Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Overview of your patients and appointments</p>
+          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Activity className="h-16 w-16 text-destructive/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Error Loading Dashboard</h3>
+              <p className="text-muted-foreground text-center mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout role="nurse">
       <div className="space-y-6">
-        {/* Welcome Section */}
         <div>
-          <h1 className="text-3xl font-bold text-balance">Welcome Back, Nurse</h1>
-          <p className="text-muted-foreground mt-1">Here's your patient care overview for today</p>
+          <h1 className="text-3xl font-bold text-balance">Nurse Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Overview of your patients and appointments</p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => {
-            const Icon = stat.icon
-            return (
-              <Card key={stat.title}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Assigned Patients */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Assigned Patients</CardTitle>
-                <CardDescription>Patients under your care</CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/nurse/patients">View All</Link>
-              </Button>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="space-y-3">
-              {assignedPatients.map((patient) => (
-                <div
-                  key={patient.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{patient.name}</p>
-                        <Badge
-                          variant={
-                            patient.priority === "high"
-                              ? "destructive"
-                              : patient.priority === "medium"
-                                ? "default"
-                                : "secondary"
-                          }
-                        >
-                          {patient.priority}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">Room {patient.room}</p>
-                      <p className="text-sm text-muted-foreground">{patient.condition}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Last vitals</p>
-                    <p className="text-sm font-medium">{patient.lastVitals}</p>
-                  </div>
-                </div>
-              ))}
+            <CardContent>
+              <div className="text-2xl font-bold">{patients.length}</div>
+              <p className="text-xs text-muted-foreground">Active patients</p>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{appointments.length}</div>
+              <p className="text-xs text-muted-foreground">Scheduled today</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Vitals Recorded</CardTitle>
+              <HeartPulse className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">24</div>
+              <p className="text-xs text-muted-foreground">Today</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Care Records</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">12</div>
+              <p className="text-xs text-muted-foreground">This week</p>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Recent Activities */}
+        {/* Patients and Appointments Grid */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Patients */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activities</CardTitle>
-              <CardDescription>Your latest care actions</CardDescription>
+              <CardTitle>Recent Patients</CardTitle>
+              <CardDescription>Patients you're currently caring for</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                  <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
-                    <ClipboardList className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">{activity.patient}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                  </div>
+            <CardContent>
+              {patients.length > 0 ? (
+                <div className="space-y-4">
+                  {patients.map((patient) => (
+                    <div key={patient.id} className="flex items-center">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="ml-4 space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {patient.user?.name || patient.users?.name || "Unknown Patient"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Patient ID: {patient.id}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No patients found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Appointments */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upcoming Appointments</CardTitle>
+              <CardDescription>Appointments scheduled for today</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {appointments.length > 0 ? (
+                <div className="space-y-4">
+                  {appointments.map((appointment) => (
+                    <div key={appointment.id} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Stethoscope className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="ml-4 space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            Patient ID: {appointment.patient_id}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Doctor ID: {appointment.doctor_id}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <Badge variant={getStatusVariant(appointment.status)}>
+                          {appointment.status}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDate(appointment.appointment_date)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No appointments scheduled</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common nursing tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-4">
-              <Button asChild variant="outline" className="h-auto py-4 bg-transparent">
-                <Link href="/nurse/vitals/record" className="flex flex-col items-center gap-2">
-                  <Thermometer className="h-6 w-6" />
-                  <span>Record Vitals</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 bg-transparent">
-                <Link href="/nurse/medication/administer" className="flex flex-col items-center gap-2">
-                  <Heart className="h-6 w-6" />
-                  <span>Administer Medication</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 bg-transparent">
-                <Link href="/nurse/care-records/new" className="flex flex-col items-center gap-2">
-                  <ClipboardList className="h-6 w-6" />
-                  <span>Update Care Notes</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 bg-transparent">
-                <Link href="/nurse/patients" className="flex flex-col items-center gap-2">
-                  <Users className="h-6 w-6" />
-                  <span>View Patients</span>
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   )

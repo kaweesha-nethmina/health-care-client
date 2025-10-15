@@ -41,27 +41,36 @@ export default function UpdatePatientCarePage() {
     setError(null)
     
     try {
-      const response = await NurseService.updatePatientCare(parseInt(patientId), {
-        patient_id: parseInt(patientId),
-        vital_signs: formData.vitalSigns,
-        medication_administered: formData.medicationAdministered,
-        notes: formData.notes,
+      const patientIdNum = parseInt(patientId)
+      
+      // Add vitals if provided
+      if (formData.vitalSigns.trim()) {
+        const vitalsResponse = await NurseService.addVitals(patientIdNum, formData.vitalSigns)
+        console.log("Vitals added:", vitalsResponse)
+      }
+      
+      // Add care record if medication or notes provided
+      if (formData.medicationAdministered.trim() || formData.notes.trim()) {
+        const careResponse = await NurseService.addCareRecord(patientIdNum, {
+          care_details: "", // This page doesn't collect care_details specifically
+          medication_administered: formData.medicationAdministered,
+          notes: formData.notes,
+        })
+        console.log("Care record added:", careResponse)
+      }
+      
+      setSuccess(true)
+      // Reset form
+      setFormData({
+        vitalSigns: "",
+        medicationAdministered: "",
+        notes: "",
       })
       
-      if (response) {
-        setSuccess(true)
-        // Reset form
-        setFormData({
-          vitalSigns: "",
-          medicationAdministered: "",
-          notes: "",
-        })
-        
-        // Redirect to patient care records page after 2 seconds
-        setTimeout(() => {
-          router.push(`/nurse/patients/${patientId}`)
-        }, 2000)
-      }
+      // Redirect to patient care records page after 2 seconds
+      setTimeout(() => {
+        router.push(`/nurse/patients/${patientId}`)
+      }, 2000)
     } catch (err) {
       console.error("Error updating patient care:", err)
       setError(err instanceof Error ? err.message : "Failed to update patient care information. Please try again.")
@@ -112,7 +121,6 @@ export default function UpdatePatientCarePage() {
                     onChange={(e) => setFormData({ ...formData, vitalSigns: e.target.value })}
                     className="pl-10"
                     rows={2}
-                    required
                   />
                 </div>
               </div>
