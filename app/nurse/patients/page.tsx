@@ -17,6 +17,7 @@ import {
 import { NurseService } from "@/lib/services"
 import { useAuth } from "@/contexts/auth-context"
 import type { ApiResponse } from "@/lib/api"
+import Link from "next/link"
 
 // Interface matching actual API response structure
 interface ActualNursePatient {
@@ -197,13 +198,11 @@ export default function NursePatientsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <HeartPulse className="h-4 w-4 mr-2" />
-                      Vitals
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Records
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <Link href={`/nurse/patients/${patient.id}/vitals`}>
+                        <HeartPulse className="h-4 w-4 mr-2" />
+                        Vitals
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>

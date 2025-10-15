@@ -7,30 +7,42 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Users, FileText, Settings, Clock, User, Activity } from "lucide-react"
 import Link from "next/link"
-import { DoctorService } from "@/lib/services"
+import { DoctorService } from "@/lib/services/doctor-service"
 import { useAuth } from "@/contexts/auth-context"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface Appointment {
   id: number
   patient_id: number
-  patient_name?: string
+  doctor_id: number
   appointment_date: string
   status: string
-  created_at?: string
-  updated_at?: string
+  location: string | null
+  created_at: string
+  updated_at: string
+  patients?: {
+    user_id: number
+  }
 }
 
 interface Patient {
   id: number
   user_id: number
-  name: string
-  email: string
-  date_of_birth: string
+  date_of_birth: string | null
   gender: string
   phone_number: string
   address: string
+  insurance_details: string | null
+  medical_history: string | null
+  emergency_contact: string
+  preferred_location: string | null
   created_at: string
   updated_at: string
+  users: {
+    name: string
+    email: string
+  }
+  profile_picture_url?: string | null
 }
 
 interface DoctorProfile {
@@ -39,6 +51,7 @@ interface DoctorProfile {
   specialty: string
   qualification: string
   schedule: string
+  location: string
   created_at: string
   updated_at: string
 }
@@ -70,10 +83,18 @@ const stats = [
   },
 ]
 
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+}
+
 export default function DoctorDashboard() {
   const { user } = useAuth()
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
-  const [recentPatients, setRecentPatients] = useState<Patient[]>([])
+  const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<DoctorProfile | null>(null)
@@ -88,25 +109,100 @@ export default function DoctorDashboard() {
         
         // Fetch doctor profile
         const profileResponse = await DoctorService.getProfile()
-        if (profileResponse.data) {
-          setProfile(profileResponse.data)
+        console.log("Profile response:", profileResponse)
+        
+        // Handle both response formats
+        let profileData: DoctorProfile | null = null
+        if (profileResponse && profileResponse.data) {
+          profileData = profileResponse.data
+        } else if (profileResponse && typeof profileResponse === 'object' && 'id' in profileResponse) {
+          // Direct response format
+          profileData = profileResponse as DoctorProfile
+        }
+        
+        if (profileData) {
+          setProfile(profileData)
         }
         
         // Fetch appointments
         const appointmentResponse = await DoctorService.getAppointmentSchedule()
-        if (appointmentResponse.data) {
-          // Filter for today's appointments
-          const today = new Date().toISOString().split('T')[0]
-          const todaysAppointments = appointmentResponse.data
-            .filter((apt: any) => apt.appointment_date.startsWith(today))
+        console.log("Appointment response:", appointmentResponse)
+        
+        // Handle both response formats
+        let appointmentsData: Appointment[] = []
+        if (Array.isArray(appointmentResponse)) {
+          appointmentsData = appointmentResponse
+        } else if (appointmentResponse && Array.isArray(appointmentResponse.data)) {
+          appointmentsData = appointmentResponse.data
+        }
+        
+        if (Array.isArray(appointmentsData)) {
+          // Filter for today's appointments using robust date comparison
+          const today = new Date()
+          // Format as YYYY-MM-DD in local timezone
+          const todayStr = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString().split('T')[0]
+          
+          const todaysAppointments = appointmentsData
+            .filter((apt: any) => {
+              if (!apt.appointment_date) return false
+              try {
+                const aptDate = new Date(apt.appointment_date)
+                // Format appointment date as YYYY-MM-DD in local timezone
+                const aptDateStr = new Date(aptDate.getFullYear(), aptDate.getMonth(), aptDate.getDate()).toISOString().split('T')[0]
+                return aptDateStr === todayStr
+              } catch (e) {
+                return false
+              }
+            })
             .slice(0, 4) // Limit to 4 for display
           setTodayAppointments(todaysAppointments)
         }
+
+        // Fetch patients to get their names
+        const patientResponse = await DoctorService.getAllPatients()
+        console.log("Patient response:", patientResponse)
         
-        // For now, we'll use a placeholder for recent patients
-        // In a real implementation, you would fetch this from an API
-        setRecentPatients([])
-      } catch (err) {
+        // Handle both response formats
+        let patientsData: Patient[] = []
+        if (Array.isArray(patientResponse)) {
+          patientsData = patientResponse
+        } else if (patientResponse && Array.isArray(patientResponse.data)) {
+          patientsData = patientResponse.data
+        }
+        
+        if (Array.isArray(patientsData)) {
+          // For each patient, fetch detailed information to get profile picture
+          const patientsWithDetails = await Promise.all(
+            patientsData.map(async (patient) => {
+              try {
+                const detailResponse = await DoctorService.getPatientDetails(patient.id)
+                console.log(`Patient ${patient.id} details:`, detailResponse)
+                
+                // Handle both response formats
+                let patientDetails = null
+                if (detailResponse && detailResponse.data) {
+                  patientDetails = detailResponse.data
+                } else if (detailResponse && typeof detailResponse === 'object' && 'id' in detailResponse) {
+                  patientDetails = detailResponse as any
+                }
+                
+                if (patientDetails) {
+                  return {
+                    ...patient,
+                    profile_picture_url: patientDetails.profile_picture_url
+                  }
+                }
+                return patient
+              } catch (err) {
+                console.error(`Error fetching details for patient ${patient.id}:`, err)
+                return patient
+              }
+            })
+          )
+          
+          setPatients(patientsWithDetails)
+        }
+      } catch (err: any) {
         console.error("Error fetching data:", err)
         setError("Failed to load dashboard data. Please try again later.")
       } finally {
@@ -117,9 +213,51 @@ export default function DoctorDashboard() {
     fetchData()
   }, [user])
 
+  // Get patient name by ID
+  const getPatientName = (patientId: number) => {
+    const patient = patients.find(p => p.id === patientId)
+    return patient ? patient.users.name : "Unknown Patient"
+  }
+
+  // Get patient profile picture URL
+  const getPatientProfilePicture = (patientId: number) => {
+    const patient = patients.find(p => p.id === patientId)
+    return patient?.profile_picture_url || null
+  }
+
   // Format time for display
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    try {
+      return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch (e) {
+      return "Invalid Time"
+    }
+  }
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString()
+    } catch (e) {
+      return "Invalid Date"
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "default"
+      case "pending":
+        return "secondary"
+      case "completed":
+        return "outline"
+      case "cancelled":
+        return "destructive"
+      case "booked":
+        return "default"
+      default:
+        return "secondary"
+    }
   }
 
   if (loading) {
@@ -181,6 +319,10 @@ export default function DoctorDashboard() {
     )
   }
 
+  // The todayAppointments state is already filtered for today's appointments in the useEffect
+  // So we can use it directly
+  const todaysAppointments = todayAppointments
+
   return (
     <DashboardLayout role="doctor">
       <div className="space-y-6">
@@ -198,9 +340,9 @@ export default function DoctorDashboard() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{todayAppointments.length}</div>
+              <div className="text-2xl font-bold">{todaysAppointments.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {todayAppointments.filter(a => a.status === 'confirmed').length} confirmed
+                {todaysAppointments.filter(a => a.status === 'confirmed' || a.status === 'booked').length} confirmed
               </p>
             </CardContent>
           </Card>
@@ -211,8 +353,8 @@ export default function DoctorDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground mt-1">Loading...</p>
+              <div className="text-2xl font-bold">{patients.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Active patients</p>
             </CardContent>
           </Card>
           
@@ -252,24 +394,32 @@ export default function DoctorDashboard() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {todayAppointments.length > 0 ? (
-                todayAppointments.map((appointment) => (
+              {todaysAppointments.length > 0 ? (
+                todaysAppointments.map((appointment) => (
                   <div
                     key={appointment.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage 
+                          src={getPatientProfilePicture(appointment.patient_id) || "/placeholder.svg"} 
+                          alt={getPatientName(appointment.patient_id)} 
+                        />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                          {getInitials(getPatientName(appointment.patient_id))}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
-                        <p className="font-medium">{appointment.patient_name || "Patient"}</p>
-                        <p className="text-sm text-muted-foreground">Appointment</p>
+                        <p className="font-medium">{getPatientName(appointment.patient_id)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(appointment.appointment_date)}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">{formatTime(appointment.appointment_date)}</p>
-                      <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"} className="mt-1">
+                      <Badge variant={appointment.status === "confirmed" || appointment.status === "booked" ? "default" : "secondary"} className="mt-1">
                         {appointment.status}
                       </Badge>
                     </div>
@@ -296,31 +446,36 @@ export default function DoctorDashboard() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recentPatients.length > 0 ? (
-                recentPatients.map((patient) => (
+              {patients.length > 0 ? (
+                patients.slice(0, 4).map((patient) => (
                   <div
                     key={patient.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-                        <User className="h-5 w-5 text-secondary" />
-                      </div>
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage 
+                          src={patient.profile_picture_url || "/placeholder.svg"} 
+                          alt={patient.users.name} 
+                        />
+                        <AvatarFallback className="bg-secondary text-secondary-foreground text-sm">
+                          {getInitials(patient.users.name)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
-                        <p className="font-medium">{patient.name}</p>
+                        <p className="font-medium">{patient.users.name}</p>
                         <p className="text-sm text-muted-foreground">Patient</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Last visit</p>
-                      <p className="text-sm font-medium">--</p>
+                      <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No recent patients data available</p>
+                  <p>No patient data available</p>
                 </div>
               )}
             </CardContent>
