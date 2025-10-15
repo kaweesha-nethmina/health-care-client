@@ -13,3 +13,4 @@ export type { InsuranceProvider as InsuranceProviderFromInsuranceService, Insura
 export { InsuranceService } from "./insurance-service"
 export * from "./prescription-service"
 export * from "./notification-service"
+export * from "./user-service"

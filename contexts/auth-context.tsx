@@ -18,11 +18,16 @@ interface RegisterResponse {
   user: User
 }
 
+interface ProfilePictureResponse {
+  profile_picture_url: string | null
+}
+
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, name: string, password: string, role: string) => Promise<void>
   logout: () => void
   isLoading: boolean
+  refreshAuthState: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -36,11 +41,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    // Load auth data from localStorage on mount
+  // Function to fetch profile picture for the current user
+  const fetchProfilePicture = async (token: string): Promise<string | null> => {
+    try {
+      // Set up authorization header
+      const response = await ApiClient.get<ProfilePictureResponse>("/users/profile/picture")
+      return response.profile_picture_url
+    } catch (error) {
+      console.error("[v0] Error fetching profile picture:", error)
+      return null
+    }
+  }
+
+  // Enhanced refreshAuthState that also fetches profile picture
+  const refreshAuthState = async () => {
     const data = getAuthData()
-    setAuthState(data)
-    setIsLoading(false)
+    
+    if (data.user && data.token) {
+      // Fetch profile picture and update user data
+      const profilePictureUrl = await fetchProfilePicture(data.token)
+      
+      // Update user object with profile picture URL
+      const updatedUser = {
+        ...data.user,
+        profile_picture_url: profilePictureUrl
+      }
+      
+      // Save updated data
+      saveAuthData(data.token, updatedUser)
+      
+      // Update state
+      setAuthState({
+        user: updatedUser,
+        token: data.token,
+        isAuthenticated: true
+      })
+    } else {
+      setAuthState(data)
+    }
+  }
+
+  useEffect(() => {
+    // Load auth data from localStorage on mount and fetch profile picture
+    const initializeAuth = async () => {
+      await refreshAuthState()
+      setIsLoading(false)
+    }
+    
+    initializeAuth()
   }, [])
 
   const login = async (email: string, password: string) => {
@@ -59,13 +107,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response && response.token && response.user) {
         const { token, user } = response as LoginResponse
         console.log("[v0] Saving auth data for user:", user);
-        saveAuthData(token, user)
+        
+        // Fetch profile picture
+        const profilePictureUrl = await fetchProfilePicture(token)
+        
+        // Update user object with profile picture URL
+        const userWithPicture = {
+          ...user,
+          profile_picture_url: profilePictureUrl
+        }
+        
+        saveAuthData(token, userWithPicture)
         
         // Verify that data was saved
         const savedData = getAuthData();
         console.log("[v0] Saved auth data:", savedData);
         
-        setAuthState({ user, token, isAuthenticated: true })
+        setAuthState({ user: userWithPicture, token, isAuthenticated: true })
         console.log("[v0] Auth state updated");
 
         // Redirect based on role
@@ -125,7 +183,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, register, logout, isLoading }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...authState, login, register, logout, isLoading, refreshAuthState }}>
+      {children}
+    </AuthContext.Provider>
   )
 }
 
