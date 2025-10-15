@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,61 +10,37 @@ import { Activity, Users, Calendar, FileText, Settings, Search, Plus, MoreVertic
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
-
-const users = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    email: "dr.johnson@hospital.com",
-    role: "doctor",
-    status: "active",
-    joinDate: "2024-01-15",
-  },
-  {
-    id: 2,
-    name: "Nurse Mary Wilson",
-    email: "mary.wilson@hospital.com",
-    role: "nurse",
-    status: "active",
-    joinDate: "2024-02-20",
-  },
-  {
-    id: 3,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "patient",
-    status: "active",
-    joinDate: "2024-03-10",
-  },
-  {
-    id: 4,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "patient",
-    status: "active",
-    joinDate: "2024-04-05",
-  },
-  {
-    id: 5,
-    name: "Dr. Michael Chen",
-    email: "dr.chen@hospital.com",
-    role: "doctor",
-    status: "inactive",
-    joinDate: "2023-11-20",
-  },
-  {
-    id: 6,
-    name: "Staff Member Tom",
-    email: "tom@hospital.com",
-    role: "staff",
-    status: "active",
-    joinDate: "2024-05-12",
-  },
-]
+import { AdminService } from "@/lib/services/admin-service"
 
 export default function AdminUsersPage() {
+  const [users, setUsers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await AdminService.getAllUsers()
+        if (response.success && Array.isArray(response.data)) {
+          setUsers(response.data.map((user: any) => ({
+            ...user,
+            joinDate: user.joinDate || new Date().toISOString(),
+          })))
+        } else {
+          setError(response.error || "Failed to fetch users.")
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch users.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUsers()
+  }, [])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -165,7 +141,7 @@ export default function AdminUsersPage() {
                               </DropdownMenu>
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">Joined: {user.joinDate}</p>
+                          <p className="text-sm text-muted-foreground">Joined: {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : 'N/A'}</p>
                         </div>
                       </div>
                     </CardContent>
