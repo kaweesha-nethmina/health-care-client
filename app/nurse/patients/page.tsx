@@ -1,178 +1,210 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Activity, Users, ClipboardList, Settings, Search, User, Eye, Heart } from "lucide-react"
-import Link from "next/link"
+import { 
+  Users, 
+  Search, 
+  Phone, 
+  MapPin, 
+  HeartPulse,
+  FileText
+} from "lucide-react"
+import { NurseService } from "@/lib/services"
+import { useAuth } from "@/contexts/auth-context"
+import type { ApiResponse } from "@/lib/api"
 
-const patients = [
-  {
-    id: "P001",
-    name: "John Doe",
-    age: 45,
-    room: "301",
-    condition: "Post-surgery recovery",
-    priority: "high",
-    lastVitals: {
-      bp: "130/85",
-      hr: "78",
-      temp: "98.6°F",
-      time: "2 hours ago",
-    },
-  },
-  {
-    id: "P002",
-    name: "Jane Smith",
-    age: 52,
-    room: "305",
-    condition: "Diabetes management",
-    priority: "medium",
-    lastVitals: {
-      bp: "125/80",
-      hr: "72",
-      temp: "98.4°F",
-      time: "1 hour ago",
-    },
-  },
-  {
-    id: "P003",
-    name: "Robert Johnson",
-    age: 38,
-    room: "310",
-    condition: "Asthma monitoring",
-    priority: "low",
-    lastVitals: {
-      bp: "120/75",
-      hr: "70",
-      temp: "98.2°F",
-      time: "30 minutes ago",
-    },
-  },
-  {
-    id: "P004",
-    name: "Emily Davis",
-    age: 29,
-    room: "315",
-    condition: "Migraine treatment",
-    priority: "medium",
-    lastVitals: {
-      bp: "118/78",
-      hr: "68",
-      temp: "98.5°F",
-      time: "45 minutes ago",
-    },
-  },
-]
+// Interface matching actual API response structure
+interface ActualNursePatient {
+  id: number
+  user_id: number
+  date_of_birth: string | null
+  gender: string | null
+  phone_number: string | null
+  address: string | null
+  insurance_details: string | null
+  medical_history: string | null
+  emergency_contact: string | null
+  created_at: string
+  updated_at: string
+  user?: {
+    id: number
+    email: string
+    name: string
+    role: string
+    profile_picture_url: string | null
+    created_at: string
+    updated_at: string
+  }
+  users?: {
+    name: string
+    email: string
+  }
+}
+
+// Type guard to check if response has data property
+function isApiResponse<T>(response: T | ApiResponse<T>): response is ApiResponse<T> {
+  return (response as ApiResponse<T>).data !== undefined
+}
 
 export default function NursePatientsPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+  const [patients, setPatients] = useState<ActualNursePatient[]>([])
+  const [filteredPatients, setFilteredPatients] = useState<ActualNursePatient[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.room.includes(searchQuery) ||
-      patient.condition.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await NurseService.getAllPatients()
+        const patientsData = isApiResponse(response) ? response.data : response
+        if (patientsData && Array.isArray(patientsData)) {
+          setPatients(patientsData)
+          setFilteredPatients(patientsData)
+        }
+      } catch (err) {
+        console.error("Error fetching patients:", err)
+        setError("Failed to load patients. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPatients()
+  }, [user])
+
+  useEffect(() => {
+    // Filter patients based on search query
+    const filtered = patients.filter(
+      (patient) =>
+        (patient.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.users?.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (patient.phone_number && patient.phone_number.includes(searchQuery)) ||
+        (patient.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        patient.users?.email?.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    setFilteredPatients(filtered)
+  }, [searchQuery, patients])
+
+  // Format date for display
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Not specified"
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="nurse">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Patient Management</h1>
+            <p className="text-muted-foreground mt-1">View and manage all patients</p>
+          </div>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="nurse">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Patient Management</h1>
+            <p className="text-muted-foreground mt-1">View and manage all patients</p>
+          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Users className="h-16 w-16 text-destructive/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Error Loading Patients</h3>
+              <p className="text-muted-foreground text-center mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout role="nurse">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-balance">Patients</h1>
-          <p className="text-muted-foreground mt-1">Manage patient care and vital signs</p>
+          <h1 className="text-3xl font-bold text-balance">Patient Management</h1>
+          <p className="text-muted-foreground mt-1">View and manage all patients</p>
         </div>
 
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, ID, room, or condition..."
+            placeholder="Search by name, email or phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
 
-        {/* Patients List */}
+        {/* Patients Grid */}
         {filteredPatients.length > 0 ? (
-          <div className="grid gap-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredPatients.map((patient) => (
-              <Card key={patient.id}>
-                <CardContent className="p-6">
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-8 w-8 text-primary" />
+              <Card key={patient.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-primary" />
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{patient.name}</h3>
-                            <Badge
-                              variant={
-                                patient.priority === "high"
-                                  ? "destructive"
-                                  : patient.priority === "medium"
-                                    ? "default"
-                                    : "secondary"
-                              }
-                            >
-                              {patient.priority}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            ID: {patient.id} • Room {patient.room} • {patient.age} years
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-sm">
-                          <span className="text-muted-foreground">Condition:</span>{" "}
-                          <span className="font-medium">{patient.condition}</span>
+                      <div>
+                        <CardTitle className="text-lg">
+                          {patient.user?.name || patient.users?.name || "Unknown Patient"}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Patient ID: {patient.id}
                         </p>
                       </div>
-                      <div className="bg-muted/50 rounded-lg p-3 mb-4">
-                        <p className="text-xs text-muted-foreground mb-2">Last Vitals ({patient.lastVitals.time})</p>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">BP</p>
-                            <p className="font-medium">{patient.lastVitals.bp}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">HR</p>
-                            <p className="font-medium">{patient.lastVitals.hr} bpm</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Temp</p>
-                            <p className="font-medium">{patient.lastVitals.temp}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" asChild>
-                          <Link href={`/nurse/patients/${patient.id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Link>
-                        </Button>
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/nurse/patients/${patient.id}/vitals`}>
-                            <Heart className="h-4 w-4 mr-2" />
-                            Record Vitals
-                          </Link>
-                        </Button>
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/nurse/patients/${patient.id}/care`}>Update Care</Link>
-                        </Button>
-                      </div>
                     </div>
+                    <Badge variant="outline">Active</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{patient.phone_number || "Not provided"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{patient.address || "Not specified"}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">DOB:</span> {formatDate(patient.date_of_birth)}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <HeartPulse className="h-4 w-4 mr-2" />
+                      Vitals
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Records
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -184,7 +216,7 @@ export default function NursePatientsPage() {
               <Users className="h-16 w-16 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Patients Found</h3>
               <p className="text-muted-foreground text-center">
-                {searchQuery ? "Try adjusting your search" : "Your assigned patients will appear here"}
+                {searchQuery ? "Try adjusting your search criteria" : "No patients available at the moment"}
               </p>
             </CardContent>
           </Card>

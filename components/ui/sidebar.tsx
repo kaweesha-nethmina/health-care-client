@@ -19,6 +19,7 @@ import {
   Package,
   User,
   Settings,
+  HeartPulse,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -56,6 +57,8 @@ const getNavigationForRole = (role: UserRole) => {
     nurse: [
       { name: "Dashboard", href: "/nurse/dashboard", icon: LayoutDashboard },
       { name: "Patients", href: "/nurse/patients", icon: Users },
+      { name: "Appointments", href: "/nurse/appointments", icon: Calendar },
+      { name: "Vitals", href: "/nurse/vitals", icon: Activity },
       { name: "Care Records", href: "/nurse/care-records", icon: ClipboardList },
       { name: "Profile", href: "/nurse/profile", icon: User },
     ],
