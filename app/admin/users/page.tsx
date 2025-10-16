@@ -1,70 +1,61 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Activity, Users, Calendar, FileText, Settings, Search, Plus, MoreVertical, User } from "lucide-react"
+import { Activity, Users, Calendar, FileText, Settings, Search, Plus, MoreVertical, User, Edit, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
-
-const users = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    email: "dr.johnson@hospital.com",
-    role: "doctor",
-    status: "active",
-    joinDate: "2024-01-15",
-  },
-  {
-    id: 2,
-    name: "Nurse Mary Wilson",
-    email: "mary.wilson@hospital.com",
-    role: "nurse",
-    status: "active",
-    joinDate: "2024-02-20",
-  },
-  {
-    id: 3,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "patient",
-    status: "active",
-    joinDate: "2024-03-10",
-  },
-  {
-    id: 4,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "patient",
-    status: "active",
-    joinDate: "2024-04-05",
-  },
-  {
-    id: 5,
-    name: "Dr. Michael Chen",
-    email: "dr.chen@hospital.com",
-    role: "doctor",
-    status: "inactive",
-    joinDate: "2023-11-20",
-  },
-  {
-    id: 6,
-    name: "Staff Member Tom",
-    email: "tom@hospital.com",
-    role: "staff",
-    status: "active",
-    joinDate: "2024-05-12",
-  },
-]
+import { AdminService, AdminUser } from "@/lib/services/admin-service"
+import { useAuth } from "@/contexts/auth-context"
+import { toast } from "sonner"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function AdminUsersPage() {
+  const { user } = useAuth()
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+
+  // Fetch users from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+        const response = await AdminService.getAllUsers()
+        console.log("API Response:", response); // Debug log
+        
+        // The API returns data directly, not wrapped in ApiResponse
+        // Handle both cases: direct array or ApiResponse with data property
+        let userData: AdminUser[] = [];
+        if (Array.isArray(response)) {
+          // Direct array response
+          userData = response;
+        } else if (response && Array.isArray((response as any).data)) {
+          // ApiResponse with data array
+          userData = (response as any).data;
+        }
+        
+        console.log("Processed user data:", userData); // Debug log
+        setUsers(userData);
+      } catch (error) {
+        console.error("Error fetching users:", error)
+        toast.error("Failed to fetch users")
+        setUsers([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchUsers()
+    }
+  }, [user])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -77,6 +68,25 @@ export default function AdminUsersPage() {
     return matchesSearch && matchesTab
   })
 
+  const handleDeleteUser = async (userId: number, userName: string) => {
+    try {
+      await AdminService.deleteUser(userId)
+      setUsers(users.filter(user => user.id !== userId))
+      toast.success(`User ${userName} deleted successfully`)
+    } catch (error) {
+      console.error("Error deleting user:", error)
+      toast.error(`Failed to delete user ${userName}`)
+    }
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+  }
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "doctor":
@@ -87,9 +97,21 @@ export default function AdminUsersPage() {
         return "outline"
       case "staff":
         return "outline"
+      case "admin":
+        return "default"
       default:
         return "secondary"
     }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -127,6 +149,7 @@ export default function AdminUsersPage() {
             <TabsTrigger value="nurse">Nurses</TabsTrigger>
             <TabsTrigger value="patient">Patients</TabsTrigger>
             <TabsTrigger value="staff">Staff</TabsTrigger>
+            <TabsTrigger value="admin">Admins</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4 mt-6">
@@ -137,9 +160,12 @@ export default function AdminUsersPage() {
                     <CardContent className="p-6">
                       <div className="flex gap-4">
                         <div className="flex-shrink-0">
-                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-6 w-6 text-primary" />
-                          </div>
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={user.profile_picture_url || "/placeholder.svg"} alt={user.name} />
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {getInitials(user.name)}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
@@ -149,7 +175,6 @@ export default function AdminUsersPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
-                              <Badge variant={user.status === "active" ? "default" : "secondary"}>{user.status}</Badge>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon">
@@ -157,15 +182,26 @@ export default function AdminUsersPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                                  <DropdownMenuItem>Edit User</DropdownMenuItem>
-                                  <DropdownMenuItem>Reset Password</DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive">Delete User</DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/admin/users/${user.id}`}>
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit User
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => handleDeleteUser(user.id, user.name)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete User
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">Joined: {user.joinDate}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Joined: {new Date(user.created_at).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                     </CardContent>

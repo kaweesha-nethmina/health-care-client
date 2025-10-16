@@ -18,6 +18,8 @@ import { NurseService } from "@/lib/services"
 import { useAuth } from "@/contexts/auth-context"
 import type { ApiResponse } from "@/lib/api"
 import Link from "next/link"
+import { MedicalRecordsModal } from "@/components/modals/medical-records-modal"
+import { VitalsModal } from "@/components/modals/vitals-modal"
 
 // Interface matching actual API response structure
 interface ActualNursePatient {
@@ -59,7 +61,11 @@ export default function NursePatientsPage() {
   const [filteredPatients, setFilteredPatients] = useState<ActualNursePatient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<ActualNursePatient | null>(null)
+  const [isMedicalRecordsModalOpen, setIsMedicalRecordsModalOpen] = useState(false)
+  const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false)
 
+  // Fetch patients when component mounts
   useEffect(() => {
     const fetchPatients = async () => {
       if (!user) return
@@ -85,8 +91,8 @@ export default function NursePatientsPage() {
     fetchPatients()
   }, [user])
 
+  // Filter patients based on search query
   useEffect(() => {
-    // Filter patients based on search query
     const filtered = patients.filter(
       (patient) =>
         (patient.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -102,6 +108,18 @@ export default function NursePatientsPage() {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Not specified"
     return new Date(dateString).toLocaleDateString()
+  }
+
+  // Handle opening medical records modal
+  const handleViewMedicalRecords = (patient: ActualNursePatient) => {
+    setSelectedPatient(patient)
+    setIsMedicalRecordsModalOpen(true)
+  }
+
+  // Handle opening vitals modal
+  const handleViewVitals = (patient: ActualNursePatient) => {
+    setSelectedPatient(patient)
+    setIsVitalsModalOpen(true)
   }
 
   if (loading) {
@@ -198,11 +216,23 @@ export default function NursePatientsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" asChild>
-                      <Link href={`/nurse/patients/${patient.id}/vitals`}>
-                        <HeartPulse className="h-4 w-4 mr-2" />
-                        Vitals
-                      </Link>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleViewMedicalRecords(patient)}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Records
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleViewVitals(patient)}
+                    >
+                      <HeartPulse className="h-4 w-4 mr-2" />
+                      Vitals
                     </Button>
                   </div>
                 </CardContent>
@@ -221,6 +251,28 @@ export default function NursePatientsPage() {
           </Card>
         )}
       </div>
+      
+      {/* Medical Records Modal */}
+      <MedicalRecordsModal
+        isOpen={isMedicalRecordsModalOpen}
+        onClose={() => {
+          setIsMedicalRecordsModalOpen(false)
+          setSelectedPatient(null)
+        }}
+        patientId={selectedPatient?.id || null}
+        patientName={selectedPatient?.user?.name || selectedPatient?.users?.name || null}
+      />
+      
+      {/* Vitals Modal */}
+      <VitalsModal
+        isOpen={isVitalsModalOpen}
+        onClose={() => {
+          setIsVitalsModalOpen(false)
+          setSelectedPatient(null)
+        }}
+        patientId={selectedPatient?.id || null}
+        patientName={selectedPatient?.user?.name || selectedPatient?.users?.name || null}
+      />
     </DashboardLayout>
   )
 }

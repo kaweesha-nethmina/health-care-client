@@ -79,6 +79,10 @@ export default function NurseAppointmentsPage() {
         if (appointmentsData && Array.isArray(appointmentsData)) {
           setAppointments(appointmentsData)
           setFilteredAppointments(appointmentsData)
+          
+          // Log unique status values for debugging
+          const statuses = [...new Set(appointmentsData.map(a => a.status))];
+          console.log("Available appointment statuses:", statuses);
         }
       } catch (err) {
         console.error("Error fetching appointments:", err)
@@ -119,6 +123,8 @@ export default function NurseAppointmentsPage() {
     switch (status.toLowerCase()) {
       case "booked":
         return "default"
+      case "confirmed":
+        return "default"
       case "completed":
         return "secondary"
       case "cancelled":
@@ -135,6 +141,8 @@ export default function NurseAppointmentsPage() {
     switch (status.toLowerCase()) {
       case "booked":
         return <Clock className="h-4 w-4" />
+      case "confirmed":
+        return <CheckCircle className="h-4 w-4" />
       case "completed":
         return <CheckCircle className="h-4 w-4" />
       case "cancelled":
@@ -147,10 +155,15 @@ export default function NurseAppointmentsPage() {
   // Update appointment status
   const updateAppointmentStatus = async (appointmentId: number, status: string) => {
     try {
+      console.log(`Updating appointment ${appointmentId} to status: ${status}`);
       const response = await NurseService.updateAppointmentStatus(appointmentId, status)
-      const updatedAppointment = isApiResponse(response) ? response.data : response
+      console.log("Appointment update response:", response);
       
-      if (updatedAppointment && isNurseAppointment(updatedAppointment)) {
+      // Check if response has data property
+      const responseData = isApiResponse(response) ? response.data : response;
+      
+      if (responseData) {
+        console.log("Successfully updated appointment:", responseData);
         // Update the appointment in the state
         setAppointments(prev => 
           prev.map(app => 
@@ -162,10 +175,28 @@ export default function NurseAppointmentsPage() {
             app.id === appointmentId ? { ...app, status } : app
           )
         )
+      } else {
+        console.warn("Failed to update appointment - no data in response");
+        setError("Failed to update appointment. No data in response.");
       }
-    } catch (err) {
-      console.error("Error updating appointment status:", err)
-      setError("Failed to update appointment status. Please try again.")
+    } catch (err: any) {
+      console.error("Error updating appointment status:", err);
+      // Try to get more detailed error information
+      if (err.response) {
+        console.error("Error response:", err.response);
+        if (err.response.data) {
+          console.error("Error response data:", err.response.data);
+          setError(`Failed to update appointment status: ${err.response.data.message || err.response.data.detail || JSON.stringify(err.response.data)}`);
+        } else {
+          setError(`Failed to update appointment status: ${err.response.statusText || 'Unknown error'}`);
+        }
+      } else if (err.request) {
+        console.error("Error request:", err.request);
+        setError("Failed to update appointment status: No response from server. Please check your connection.");
+      } else {
+        console.error("Error message:", err.message);
+        setError(`Failed to update appointment status: ${err.message || 'Unknown error'}`);
+      }
     }
   }
 
@@ -215,14 +246,38 @@ export default function NurseAppointmentsPage() {
         </div>
 
         {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by patient, doctor or status..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex items-center gap-4">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by patient, doctor or status..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              // Refresh appointments
+              try {
+                setLoading(true);
+                const response = await NurseService.getAllAppointments();
+                const appointmentsData = isApiResponse(response) ? response.data : response;
+                if (appointmentsData && Array.isArray(appointmentsData)) {
+                  setAppointments(appointmentsData);
+                  setFilteredAppointments(appointmentsData);
+                }
+              } catch (err) {
+                console.error("Error refreshing appointments:", err);
+                setError("Failed to refresh appointments. Please try again later.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            Refresh
+          </Button>
         </div>
 
         {/* Appointments List */}
@@ -260,6 +315,15 @@ export default function NurseAppointmentsPage() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => updateAppointmentStatus(appointment.id, "confirmed")}
+                      disabled={appointment.status === "confirmed" || appointment.status === "completed" || appointment.status === "cancelled"}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Confirm
+                    </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 

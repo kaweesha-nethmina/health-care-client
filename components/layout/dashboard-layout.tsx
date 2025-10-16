@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -40,9 +40,35 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   const [isDark, setIsDark] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  useEffect(() => {
+    // Check for saved theme preference in localStorage
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme === 'dark') {
+      setIsDark(true)
+      document.documentElement.classList.add('dark')
+    } else if (savedTheme === 'light') {
+      setIsDark(false)
+      document.documentElement.classList.remove('dark')
+    } else {
+      // If no saved preference, use system preference
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      setIsDark(systemPrefersDark)
+      if (systemPrefersDark) {
+        document.documentElement.classList.add('dark')
+      }
+    }
+  }, [])
+
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    const newTheme = !isDark
+    setIsDark(newTheme)
+    if (newTheme) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
   }
 
   const getInitials = (name: string) => {

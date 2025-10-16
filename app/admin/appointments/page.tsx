@@ -1,60 +1,174 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Activity, Users, Calendar, FileText, Settings, Search } from "lucide-react"
-
-const appointments = [
-  {
-    id: 1,
-    patient: "John Doe",
-    doctor: "Dr. Sarah Johnson",
-    date: "2025-10-20",
-    time: "10:00 AM",
-    status: "confirmed",
-    type: "Follow-up",
-  },
-  {
-    id: 2,
-    patient: "Jane Smith",
-    doctor: "Dr. Michael Chen",
-    date: "2025-10-20",
-    time: "11:30 AM",
-    status: "confirmed",
-    type: "Consultation",
-  },
-  {
-    id: 3,
-    patient: "Robert Johnson",
-    doctor: "Dr. Sarah Johnson",
-    date: "2025-10-21",
-    time: "2:00 PM",
-    status: "pending",
-    type: "Checkup",
-  },
-  {
-    id: 4,
-    patient: "Emily Davis",
-    doctor: "Dr. Emily Rodriguez",
-    date: "2025-10-21",
-    time: "3:30 PM",
-    status: "confirmed",
-    type: "Follow-up",
-  },
-]
+import { Button } from "@/components/ui/button"
+import { 
+  Calendar, 
+  Search, 
+  Eye, 
+  Edit,
+  Trash2
+} from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { toast } from "sonner"
+import { format } from "date-fns"
+import { AdminAppointmentService, AdminAppointmentDetail } from "@/lib/services/admin-appointment-service"
+import { AppointmentDetailsModal } from "@/components/admin/appointment-details-modal"
+import { AppointmentStatusModal } from "@/components/admin/appointment-status-modal"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function AdminAppointmentsPage() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [appointments, setAppointments] = useState<AdminAppointmentDetail[]>([])
+  
+  // Modal states
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState("")
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true)
+        // For now, we'll fetch basic appointments and then get details for each
+        // In a real implementation, there would be an endpoint that returns detailed appointments
+        const basicAppointments = await AdminAppointmentService.getAllAppointments()
+        
+        // Fetch detailed information for each appointment
+        const detailedAppointments = await Promise.all(
+          basicAppointments.map(async (appointment) => {
+            try {
+              const detailed = await AdminAppointmentService.getAppointmentById(appointment.id)
+              return detailed
+            } catch (error) {
+              console.error(`Error fetching details for appointment ${appointment.id}:`, error)
+              // Return the basic appointment if details fail to load
+              return appointment as unknown as AdminAppointmentDetail
+            }
+          })
+        )
+        
+        setAppointments(detailedAppointments)
+      } catch (error) {
+        console.error("Error fetching appointments:", error)
+        toast.error("Failed to fetch appointments")
+        setAppointments([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchAppointments()
+    }
+  }, [user])
+
+  const handleViewDetails = (appointmentId: number) => {
+    setSelectedAppointmentId(appointmentId)
+    setIsDetailsModalOpen(true)
+  }
+
+  const handleStatusChange = (appointmentId: number, status: string) => {
+    setSelectedAppointmentId(appointmentId)
+    setCurrentStatus(status)
+    setIsStatusModalOpen(true)
+  }
+
+  const handleDelete = async (appointmentId: number) => {
+    try {
+      await AdminAppointmentService.deleteAppointment(appointmentId)
+      setAppointments(appointments.filter(apt => apt.id !== appointmentId))
+      toast.success("Appointment deleted successfully")
+    } catch (error) {
+      console.error("Error deleting appointment:", error)
+      toast.error("Failed to delete appointment")
+    }
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+  }
+
+  const handleStatusUpdated = () => {
+    // Refresh the appointments list
+    const fetchAppointments = async () => {
+      try {
+        // For now, we'll fetch basic appointments and then get details for each
+        // In a real implementation, there would be an endpoint that returns detailed appointments
+        const basicAppointments = await AdminAppointmentService.getAllAppointments()
+        
+        // Fetch detailed information for each appointment
+        const detailedAppointments = await Promise.all(
+          basicAppointments.map(async (appointment) => {
+            try {
+              const detailed = await AdminAppointmentService.getAppointmentById(appointment.id)
+              return detailed
+            } catch (error) {
+              console.error(`Error fetching details for appointment ${appointment.id}:`, error)
+              // Return the basic appointment if details fail to load
+              return appointment as unknown as AdminAppointmentDetail
+            }
+          })
+        )
+        
+        setAppointments(detailedAppointments)
+      } catch (error) {
+        console.error("Error fetching appointments:", error)
+        toast.error("Failed to refresh appointments")
+      }
+    }
+
+    fetchAppointments()
+  }
 
   const filteredAppointments = appointments.filter(
     (apt) =>
-      apt.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.type.toLowerCase().includes(searchQuery.toLowerCase()),
+      (apt.patients.users.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.doctors.users.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      apt.status.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  const formatAppointmentDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return {
+      date: format(date, "PPP"),
+      time: format(date, "p")
+    }
+  }
+
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "confirmed":
+        return "default"
+      case "completed":
+        return "secondary"
+      case "cancelled":
+        return "destructive"
+      default:
+        return "outline"
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout role="admin">
@@ -78,29 +192,70 @@ export default function AdminAppointmentsPage() {
         {/* Appointments List */}
         {filteredAppointments.length > 0 ? (
           <div className="grid gap-4">
-            {filteredAppointments.map((appointment) => (
-              <Card key={appointment.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-lg">{appointment.patient}</h3>
-                      <p className="text-sm text-muted-foreground">with {appointment.doctor}</p>
+            {filteredAppointments.map((appointment) => {
+              const formattedDate = formatAppointmentDate(appointment.appointment_date)
+              return (
+                <Card key={appointment.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage 
+                            src={appointment.patients.users.profile_picture_url || "/placeholder.svg"} 
+                            alt={appointment.patients.users.name} 
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {getInitials(appointment.patients.users.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold text-lg">{appointment.patients.users.name}</h3>
+                          <p className="text-sm text-muted-foreground">with {appointment.doctors.users.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getStatusVariant(appointment.status)}>
+                          {appointment.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{appointment.type}</Badge>
-                      <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
-                        {appointment.status}
-                      </Badge>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <span>
+                        {formattedDate.date} at {formattedDate.time}
+                      </span>
+                      {appointment.location && (
+                        <span>{appointment.location}</span>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>
-                      {appointment.date} at {appointment.time}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleViewDetails(appointment.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleStatusChange(appointment.id, appointment.status)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Change Status
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        onClick={() => handleDelete(appointment.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         ) : (
           <Card>
@@ -114,6 +269,23 @@ export default function AdminAppointmentsPage() {
           </Card>
         )}
       </div>
+
+      {/* Appointment Details Modal */}
+      <AppointmentDetailsModal
+        appointmentId={selectedAppointmentId}
+        open={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        onStatusChange={handleStatusUpdated}
+      />
+
+      {/* Appointment Status Modal */}
+      <AppointmentStatusModal
+        appointmentId={selectedAppointmentId}
+        currentStatus={currentStatus}
+        open={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        onStatusChange={handleStatusUpdated}
+      />
     </DashboardLayout>
   )
 }

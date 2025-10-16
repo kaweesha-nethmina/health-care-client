@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,10 +8,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Activity, Users, Calendar, FileText, Settings, Save } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { toast } from "sonner"
+import { AdminService } from "@/lib/services/admin-service"
+
+interface SystemSettings {
+  systemName: string
+  supportEmail: string
+  maxAppointmentsPerDay: string
+  enableNotifications: boolean
+  enableEmailAlerts: boolean
+  enableSMSAlerts: boolean
+  maintenanceMode: boolean
+}
 
 export default function AdminSettingsPage() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<SystemSettings>({
     systemName: "Lifeline Healthcare System",
     supportEmail: "support@lifeline.com",
     maxAppointmentsPerDay: "50",
@@ -21,10 +36,49 @@ export default function AdminSettingsPage() {
     maintenanceMode: false,
   })
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setLoading(true)
+        // In a real implementation, you would fetch settings from an API
+        // For now, we'll use the default settings
+        // If there were real API endpoints, you would call them here
+      } catch (error) {
+        console.error("Error fetching settings:", error)
+        toast.error("Failed to fetch settings")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchSettings()
+    }
+  }, [user])
+
   const handleSave = async () => {
     setIsSaving(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSaving(false)
+    try {
+      // In a real implementation, you would save settings to an API
+      // For now, we'll just simulate a save operation
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      toast.success("Settings saved successfully!")
+    } catch (error) {
+      console.error("Error saving settings:", error)
+      toast.error("Failed to save settings")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (

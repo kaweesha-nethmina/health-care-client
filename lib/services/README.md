@@ -21,6 +21,33 @@ Each service file corresponds to a specific user role or functionality area in t
 - `prescription-service.ts` - Prescription management
 - `notification-service.ts` - User notifications
 
+## Admin Service Methods
+
+The AdminService includes the following methods for user and system management:
+
+- `createUser(data)` - Create a new user
+- `configureSystem(data)` - Configure system settings
+- `getAllUsers()` - Get all users in the system (returns AdminUser[] with extended properties)
+- `getUserById(id)` - Get a specific user by ID (returns AdminUser with extended properties)
+- `updateUser(id, data)` - Update a specific user
+- `deleteUser(id)` - Delete a specific user
+
+## Admin User Interface
+
+The AdminUser interface extends the base User interface with additional properties:
+
+```typescript
+interface AdminUser extends User {
+  phone_number: string | null
+  date_of_birth: string | null
+  gender: string | null
+  address: string | null
+  emergency_contact: string | null
+  created_at: string
+  updated_at: string
+}
+```
+
 ## Usage
 
 ### Importing Services

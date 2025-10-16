@@ -71,6 +71,7 @@ const getNavigationForRole = (role: UserRole) => {
       { name: "Users", href: "/admin/users", icon: Users },
       { name: "Appointments", href: "/admin/appointments", icon: Calendar },
       { name: "Reports", href: "/admin/reports", icon: BarChart3 },
+      { name: "Profile", href: "/admin/profile", icon: User },
       { name: "Settings", href: "/admin/settings", icon: Settings },
     ],
     healthcare_manager: [

@@ -71,6 +71,24 @@ export interface CareRecord {
   updated_at: string
 }
 
+// Medical Record interface
+export interface MedicalRecord {
+  id: number
+  patient_id: number
+  doctor_id: number
+  diagnosis: string
+  treatment_plan: string
+  prescriptions: string
+  record_date: string
+  updated_at: string
+  doctors: {
+    users: {
+      name: string
+    }
+    user_id: number
+  }
+}
+
 // Type guard to check if response has data property
 function hasDataProperty<T>(response: ApiResponse<T> | T[]): response is ApiResponse<T> {
   return (response as ApiResponse<T>).data !== undefined
@@ -106,6 +124,11 @@ export class NurseService {
   // Get patient vitals history
   static async getPatientVitals(patientId: number): Promise<ApiResponse<Vitals[]> | Vitals[]> {
     return api.get<Vitals[]>(`/nurses/patients/${patientId}/vitals`)
+  }
+
+  // Get patient medical records
+  static async getPatientMedicalRecords(patientId: number): Promise<ApiResponse<MedicalRecord[]> | MedicalRecord[]> {
+    return api.get<MedicalRecord[]>(`/nurses/patients/${patientId}/medical-records`)
   }
 
   // Add care record for a patient

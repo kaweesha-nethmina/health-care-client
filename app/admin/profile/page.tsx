@@ -7,42 +7,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, Users, ClipboardList, Settings, Save, Activity, Upload, X, Edit } from "lucide-react"
+import { Calendar, Users, FileText, Settings, Save, Activity, Upload, X, Edit } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 import { UserService, UserProfile } from "@/lib/services/user-service"
-import { NurseService, NursePatient } from "@/lib/services/nurse-service"
+import { AdminService, AdminUser } from "@/lib/services/admin-service"
 import { ApiResponse } from "@/lib/api"
 
-interface NurseProfile {
-  id: number
-  user_id: number
-  date_of_birth: string | null
-  gender: string | null
-  phone_number: string | null
-  address: string | null
-  emergency_contact: string | null
-  created_at: string
-  updated_at: string
-  user: {
-    id: number
-    email: string
-    name: string
-    role: string
-    profile_picture_url: string | null
-    created_at: string
-    updated_at: string
-  }
-}
-
-export default function NurseProfilePage() {
+export default function AdminProfilePage() {
   const { user, refreshAuthState } = useAuth()
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isEditingPicture, setIsEditingPicture] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [nurseProfile, setNurseProfile] = useState<NurseProfile | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [newProfilePicture, setNewProfilePicture] = useState<File | null>(null)
@@ -53,10 +31,6 @@ export default function NurseProfilePage() {
     name: user?.name || "",
     email: user?.email || "",
     phone: "",
-    licenseNumber: "",
-    department: "",
-    shift: "",
-    experience: "",
     dateOfBirth: "",
     gender: "",
     address: "",
@@ -77,9 +51,9 @@ export default function NurseProfilePage() {
         
         if (userProfileResponse) {
           // Handle both response formats
-          const userData = userProfileResponse.data || userProfileResponse
+          const userData = (userProfileResponse as any).data || userProfileResponse
           if (userData) {
-            setUserProfile(userData)
+            setUserProfile(userData as UserProfile)
             setProfilePicture(userData.profile_picture_url)
             
             // Update form data with user profile info
@@ -93,35 +67,6 @@ export default function NurseProfilePage() {
               address: userData.address || prev.address,
               emergencyContact: userData.emergency_contact || prev.emergencyContact,
             }))
-          }
-        }
-        
-        // Fetch nurse-specific profile by getting all patients and using the first one to extract nurse info
-        // This is a workaround since there's no direct endpoint for nurse profile
-        const nurseProfileResponse: any = await NurseService.getAllPatients()
-        console.log("Nurse profile response:", nurseProfileResponse)
-        
-        if (nurseProfileResponse) {
-          // Handle both response formats
-          const nurseData = nurseProfileResponse.data || nurseProfileResponse
-          
-          if (nurseData && Array.isArray(nurseData) && nurseData.length > 0) {
-            // Extract nurse profile from the first patient's user data
-            const firstPatient = nurseData[0];
-            if (firstPatient.user) {
-              setNurseProfile({
-                id: firstPatient.user.id,
-                user_id: firstPatient.user.id,
-                date_of_birth: firstPatient.user.date_of_birth,
-                gender: firstPatient.user.gender,
-                phone_number: firstPatient.user.phone_number,
-                address: firstPatient.user.address,
-                emergency_contact: firstPatient.user.emergency_contact,
-                created_at: firstPatient.user.created_at,
-                updated_at: firstPatient.user.updated_at,
-                user: firstPatient.user
-              });
-            }
           }
         }
       } catch (err) {
@@ -138,23 +83,29 @@ export default function NurseProfilePage() {
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
-      // Update user profile (name and other user fields)
+      // Update user profile
       const updateUserProfileData: any = {}
+      
       if (formData.name !== (userProfile?.name || user?.name || "")) {
         updateUserProfileData.name = formData.name
       }
+      
       if (formData.phone !== (userProfile?.phone_number || "")) {
         updateUserProfileData.phone_number = formData.phone || null
       }
+      
       if (formData.dateOfBirth !== (userProfile?.date_of_birth || "")) {
         updateUserProfileData.date_of_birth = formData.dateOfBirth || null
       }
+      
       if (formData.gender !== (userProfile?.gender || "")) {
         updateUserProfileData.gender = formData.gender || null
       }
+      
       if (formData.address !== (userProfile?.address || "")) {
         updateUserProfileData.address = formData.address || null
       }
+      
       if (formData.emergencyContact !== (userProfile?.emergency_contact || "")) {
         updateUserProfileData.emergency_contact = formData.emergencyContact || null
       }
@@ -168,7 +119,7 @@ export default function NurseProfilePage() {
           // Handle both response formats
           const userData = userProfileResponse.data || userProfileResponse
           if (userData) {
-            setUserProfile(userData)
+            setUserProfile(userData as UserProfile)
             setProfilePicture(userData.profile_picture_url)
             
             // Refresh auth context to get updated profile picture
@@ -201,7 +152,7 @@ export default function NurseProfilePage() {
           
           if (pictureResponse) {
             // Handle both response formats
-            const pictureData = pictureResponse.data || pictureResponse
+            const pictureData = (pictureResponse as any).data || pictureResponse
             if (pictureData) {
               const newPictureUrl = pictureData.fileUrl || pictureData.profile_picture_url || null
               setProfilePicture(newPictureUrl)
@@ -258,7 +209,7 @@ export default function NurseProfilePage() {
       
       if (response) {
         // Handle both response formats
-        const userData = response.data || response
+        const userData = (response as any).data || response
         if (userData) {
           setProfilePicture(null)
           setUserProfile(prev => prev ? {
@@ -292,7 +243,7 @@ export default function NurseProfilePage() {
 
   if (loading) {
     return (
-      <DashboardLayout role="nurse">
+      <DashboardLayout role="admin">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div>
@@ -310,12 +261,12 @@ export default function NurseProfilePage() {
 
   if (error) {
     return (
-      <DashboardLayout role="nurse">
+      <DashboardLayout role="admin">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-balance">Profile</h1>
-              <p className="text-muted-foreground mt-1">Manage your professional information</p>
+              <p className="text-muted-foreground mt-1">Manage your profile information</p>
             </div>
           </div>
           <Card>
@@ -332,12 +283,12 @@ export default function NurseProfilePage() {
   }
 
   return (
-    <DashboardLayout role="nurse">
+    <DashboardLayout role="admin">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-balance">Profile</h1>
-            <p className="text-muted-foreground mt-1">Manage your professional information</p>
+            <p className="text-muted-foreground mt-1">Manage your profile information</p>
           </div>
         </div>
 
@@ -381,7 +332,7 @@ export default function NurseProfilePage() {
                     alt={user?.name} 
                   />
                   <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    {user?.name ? getInitials(user.name) : "N"}
+                    {user?.name ? getInitials(user.name) : "A"}
                   </AvatarFallback>
                 </Avatar>
                 {isEditingPicture && (
@@ -460,10 +411,6 @@ export default function NurseProfilePage() {
                     name: userProfile?.name || user?.name || "",
                     email: userProfile?.email || user?.email || "",
                     phone: userProfile?.phone_number || "",
-                    licenseNumber: "",
-                    department: "",
-                    shift: "",
-                    experience: "",
                     dateOfBirth: userProfile?.date_of_birth || "",
                     gender: userProfile?.gender || "",
                     address: userProfile?.address || "",
@@ -507,9 +454,9 @@ export default function NurseProfilePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth</Label>
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
                 <Input
-                  id="dob"
+                  id="dateOfBirth"
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
@@ -526,104 +473,22 @@ export default function NurseProfilePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="emergency">Emergency Contact</Label>
+                <Label htmlFor="emergencyContact">Emergency Contact</Label>
                 <Input
-                  id="emergency"
+                  id="emergencyContact"
                   value={formData.emergencyContact}
                   onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
                   disabled={!isEditingProfile}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                disabled={!isEditingProfile}
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Professional Information */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle>Professional Information</CardTitle>
-              <CardDescription>Your work details and schedule</CardDescription>
-            </div>
-            {!isEditingProfile ? (
-              <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button onClick={handleSaveProfile} disabled={isSaving} size="sm">
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  // Reset form data to original values
-                  setFormData({
-                    name: userProfile?.name || user?.name || "",
-                    email: userProfile?.email || user?.email || "",
-                    phone: userProfile?.phone_number || "",
-                    licenseNumber: "",
-                    department: "",
-                    shift: "",
-                    experience: "",
-                    dateOfBirth: userProfile?.date_of_birth || "",
-                    gender: userProfile?.gender || "",
-                    address: userProfile?.address || "",
-                    emergencyContact: userProfile?.emergency_contact || "",
-                  })
-                  setIsEditingProfile(false)
-                }} size="sm" disabled={isSaving}>
-                  Cancel
-                </Button>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="license">License Number</Label>
-                <Input
-                  id="license"
-                  value={formData.licenseNumber}
-                  onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Textarea
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   disabled={!isEditingProfile}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  disabled={!isEditingProfile}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="shift">Shift</Label>
-                <Input
-                  id="shift"
-                  value={formData.shift}
-                  onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
-                  disabled={!isEditingProfile}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="experience">Experience</Label>
-                <Input
-                  id="experience"
-                  value={formData.experience}
-                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                  disabled={!isEditingProfile}
+                  rows={3}
                 />
               </div>
             </div>

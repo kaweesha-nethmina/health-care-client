@@ -129,62 +129,84 @@ export interface PatientDetails {
 
 export class DoctorService {
   // Get doctor profile
-  static async getProfile(): Promise<ApiResponse<DoctorProfile>> {
-    return api.get<DoctorProfile>("/doctors/profile")
+  static async getProfile(): Promise<DoctorProfile | ApiResponse<DoctorProfile>> {
+    const response = await api.get<DoctorProfile>("/doctors/profile")
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Update doctor profile
-  static async updateProfile(data: Partial<DoctorProfile>): Promise<ApiResponse<DoctorProfile>> {
-    return api.put<DoctorProfile>("/doctors/profile", data)
+  static async updateProfile(data: Partial<DoctorProfile>): Promise<DoctorProfile | ApiResponse<DoctorProfile>> {
+    const response = await api.put<DoctorProfile>("/doctors/profile", data)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // View patient medical records
-  static async getPatientMedicalRecords(patientId: number): Promise<ApiResponse<DoctorMedicalRecord[]>> {
-    return api.get<DoctorMedicalRecord[]>(`/doctors/patients/${patientId}/medical-records`)
+  static async getPatientMedicalRecords(patientId: number): Promise<DoctorMedicalRecord[] | ApiResponse<DoctorMedicalRecord[]>> {
+    const response = await api.get<DoctorMedicalRecord[]>(`/doctors/patients/${patientId}/medical-records`)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Create medical record for patient
-  static async createMedicalRecord(patientId: number, data: Partial<DoctorMedicalRecord>): Promise<ApiResponse<DoctorMedicalRecord>> {
-    return api.post<DoctorMedicalRecord>(`/doctors/patients/${patientId}/medical-records`, data)
+  static async createMedicalRecord(patientId: number, data: Partial<DoctorMedicalRecord>): Promise<DoctorMedicalRecord | ApiResponse<DoctorMedicalRecord>> {
+    const response = await api.post<DoctorMedicalRecord>(`/doctors/patients/${patientId}/medical-records`, data)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get appointment schedule
-  static async getAppointmentSchedule(): Promise<ApiResponse<DoctorAppointment[]>> {
-    return api.get<DoctorAppointment[]>("/doctors/appointments")
+  static async getAppointmentSchedule(): Promise<DoctorAppointment[] | ApiResponse<DoctorAppointment[]>> {
+    const response = await api.get<DoctorAppointment[]>("/doctors/appointments")
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get medical record by ID
-  static async getMedicalRecordById(recordId: number): Promise<ApiResponse<DoctorMedicalRecord>> {
-    return api.get<DoctorMedicalRecord>(`/doctors/medical-records/${recordId}`)
+  static async getMedicalRecordById(recordId: number): Promise<DoctorMedicalRecord | ApiResponse<DoctorMedicalRecord>> {
+    const response = await api.get<DoctorMedicalRecord>(`/doctors/medical-records/${recordId}`)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Update medical record
-  static async updateMedicalRecord(recordId: number, data: Partial<DoctorMedicalRecord>): Promise<ApiResponse<DoctorMedicalRecord>> {
-    return api.put<DoctorMedicalRecord>(`/doctors/medical-records/${recordId}`, data)
+  static async updateMedicalRecord(recordId: number, data: Partial<DoctorMedicalRecord>): Promise<DoctorMedicalRecord | ApiResponse<DoctorMedicalRecord>> {
+    const response = await api.put<DoctorMedicalRecord>(`/doctors/medical-records/${recordId}`, data)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Delete medical record
-  static async deleteMedicalRecord(recordId: number): Promise<ApiResponse<null>> {
-    return api.delete<null>(`/doctors/medical-records/${recordId}`)
+  static async deleteMedicalRecord(recordId: number): Promise<null | ApiResponse<null>> {
+    const response = await api.delete<null>(`/doctors/medical-records/${recordId}`)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get all patients
-  static async getAllPatients(): Promise<ApiResponse<DoctorPatient[]>> {
-    return api.get<DoctorPatient[]>("/nurses/patients")
+  static async getAllPatients(): Promise<DoctorPatient[] | ApiResponse<DoctorPatient[]>> {
+    const response = await api.get<DoctorPatient[]>("/nurses/patients")
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get patient details
-  static async getPatientDetails(patientId: number): Promise<ApiResponse<PatientDetails>> {
-    return api.get<PatientDetails>(`/doctors/patients/${patientId}/details`)
+  static async getPatientDetails(patientId: number): Promise<PatientDetails | ApiResponse<PatientDetails>> {
+    const response = await api.get<PatientDetails>(`/doctors/patients/${patientId}/details`)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get patient appointments
-  static async getPatientAppointments(patientId: number): Promise<ApiResponse<DoctorAppointment[]>> {
-    return api.get<DoctorAppointment[]>(`/doctors/patients/${patientId}/appointments`)
+  static async getPatientAppointments(patientId: number): Promise<DoctorAppointment[] | ApiResponse<DoctorAppointment[]>> {
+    const response = await api.get<DoctorAppointment[]>(`/doctors/patients/${patientId}/appointments`)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get all medical records for the doctor (for all patients)
-  static async getAllMedicalRecords(): Promise<ApiResponse<DoctorMedicalRecord[]>> {
+  static async getAllMedicalRecords(): Promise<DoctorMedicalRecord[] | ApiResponse<DoctorMedicalRecord[]>> {
     // This is a placeholder - in a real implementation, there would be a specific endpoint
     // For now, we'll handle this in the UI by fetching records for each patient
     throw new Error("Not implemented - fetch records per patient instead")

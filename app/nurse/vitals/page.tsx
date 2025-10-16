@@ -5,7 +5,6 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { 
   HeartPulse, 
   Search, 
@@ -71,7 +70,9 @@ export default function NurseVitalsPage() {
   const [patients, setPatients] = useState<ActualNursePatient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<ActualNursePatient | null>(null)
   const [vitalsRecords, setVitalsRecords] = useState<VitalsRecord[]>([])
-  const [newVitals, setNewVitals] = useState("")
+  const [bp, setBp] = useState("")
+  const [hr, setHr] = useState("")
+  const [temp, setTemp] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -135,18 +136,36 @@ export default function NurseVitalsPage() {
     return new Date(dateString).toLocaleString()
   }
 
+  // Combine vitals into a single string
+  const combineVitals = () => {
+    const parts = []
+    if (bp.trim()) parts.push(`BP: ${bp.trim()}`)
+    if (hr.trim()) parts.push(`HR: ${hr.trim()}`)
+    if (temp.trim()) parts.push(`Temp: ${temp.trim()}°F`)
+    return parts.join(", ")
+  }
+
   // Handle adding new vitals
   const handleAddVitals = async () => {
-    if (!selectedPatient || !newVitals.trim()) return
+    if (!selectedPatient) return
+    
+    const combinedVitals = combineVitals()
+    if (!combinedVitals) {
+      setError("Please enter at least one vital sign")
+      return
+    }
     
     try {
       setSaving(true)
-      const response = await NurseService.addVitals(selectedPatient.id, newVitals)
+      const response = await NurseService.addVitals(selectedPatient.id, combinedVitals)
       const newVitalRecord = isApiResponse(response) ? response.data : response
       
       if (newVitalRecord && isVitalsRecord(newVitalRecord)) {
         setVitalsRecords(prev => [newVitalRecord, ...prev])
-        setNewVitals("")
+        // Clear the input fields
+        setBp("")
+        setHr("")
+        setTemp("")
       }
     } catch (err) {
       console.error("Error adding vitals:", err)
@@ -252,18 +271,36 @@ export default function NurseVitalsPage() {
                   <CardDescription>Record new vital signs for {selectedPatient.user?.name || selectedPatient.users?.name || "Unknown Patient"}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Textarea
-                      placeholder="Enter vital signs (e.g., BP: 120/80, HR: 72, Temp: 98.6°F)"
-                      value={newVitals}
-                      onChange={(e) => setNewVitals(e.target.value)}
-                      rows={4}
-                    />
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Blood Pressure (BP)</label>
+                      <Input
+                        placeholder="e.g., 120/80"
+                        value={bp}
+                        onChange={(e) => setBp(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Heart Rate (HR)</label>
+                      <Input
+                        placeholder="e.g., 72"
+                        value={hr}
+                        onChange={(e) => setHr(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Temperature (Temp)</label>
+                      <Input
+                        placeholder="e.g., 98.6"
+                        value={temp}
+                        onChange={(e) => setTemp(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <Button 
                     className="w-full" 
                     onClick={handleAddVitals}
-                    disabled={saving || !newVitals.trim()}
+                    disabled={saving || (!bp.trim() && !hr.trim() && !temp.trim())}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     {saving ? "Recording..." : "Record Vitals"}

@@ -34,38 +34,50 @@ export interface UpdateProfileRequest {
 
 export class UserService {
   // Get user profile
-  static async getProfile(): Promise<ApiResponse<UserProfile>> {
-    return api.get<UserProfile>("/users/profile")
+  static async getProfile(): Promise<UserProfile | ApiResponse<UserProfile>> {
+    const response = await api.get<UserProfile>("/users/profile")
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Update user profile
-  static async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<UserProfile>> {
-    return api.put<UserProfile>("/users/profile", data)
+  static async updateProfile(data: UpdateProfileRequest): Promise<UserProfile | ApiResponse<UserProfile>> {
+    const response = await api.put<UserProfile>("/users/profile", data)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Upload profile picture
-  static async uploadProfilePicture(file: File): Promise<ApiResponse<UserProfile & { fileUrl: string }>> {
+  static async uploadProfilePicture(file: File): Promise<UserProfile & { fileUrl: string } | ApiResponse<UserProfile & { fileUrl: string }>> {
     const formData = new FormData()
     formData.append("profilePicture", file)
     
-    return api.postFormData<UserProfile & { fileUrl: string }>("/users/profile/picture", formData)
+    const response = await api.postFormData<UserProfile & { fileUrl: string }>("/users/profile/picture", formData)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Update profile picture
-  static async updateProfilePicture(file: File): Promise<ApiResponse<UserProfile & { fileUrl: string }>> {
+  static async updateProfilePicture(file: File): Promise<UserProfile & { fileUrl: string } | ApiResponse<UserProfile & { fileUrl: string }>> {
     const formData = new FormData()
     formData.append("profilePicture", file)
     
-    return api.putFormData<UserProfile & { fileUrl: string }>("/users/profile/picture", formData)
+    const response = await api.putFormData<UserProfile & { fileUrl: string }>("/users/profile/picture", formData)
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Get own profile picture
-  static async getProfilePicture(): Promise<ApiResponse<ProfilePictureResponse>> {
-    return api.get<ProfilePictureResponse>("/users/profile/picture")
+  static async getProfilePicture(): Promise<ProfilePictureResponse | ApiResponse<ProfilePictureResponse>> {
+    const response = await api.get<ProfilePictureResponse>("/users/profile/picture")
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 
   // Delete own profile picture
-  static async deleteProfilePicture(): Promise<ApiResponse<UserProfile>> {
-    return api.delete<UserProfile>("/users/profile/picture")
+  static async deleteProfilePicture(): Promise<UserProfile | ApiResponse<UserProfile>> {
+    const response = await api.delete<UserProfile>("/users/profile/picture")
+    // Handle both direct response and ApiResponse formats
+    return response
   }
 }
