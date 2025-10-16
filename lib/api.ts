@@ -50,12 +50,20 @@ export class ApiClient {
     }
 
     try {
+      console.log(`Making API request to: ${API_BASE_URL}${endpoint}`);
+      console.log("Request options:", fetchOptions);
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions)
+      
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
 
       // Check if response is JSON
       const contentType = response.headers.get("content-type")
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json()
+        
+        console.log("Response data:", data);
 
         if (!response.ok) {
           throw new Error(data.error || "An error occurred")
@@ -67,6 +75,8 @@ export class ApiClient {
       } else {
         // Handle non-JSON responses (like HTML error pages)
         const text = await response.text()
+        console.log("Non-JSON response:", text);
+        
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${text || "An error occurred"}`)
         }

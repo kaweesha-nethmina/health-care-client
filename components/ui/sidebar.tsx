@@ -20,6 +20,9 @@ import {
   User,
   Settings,
   HeartPulse,
+  Clock,
+  Stethoscope,
+  CheckCircle,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -64,6 +67,11 @@ const getNavigationForRole = (role: UserRole) => {
     staff: [
       { name: "Dashboard", href: "/staff/dashboard", icon: LayoutDashboard },
       { name: "Check-in", href: "/staff/check-in", icon: ClipboardList },
+      { name: "Pending Check-ins", href: "/staff/pending-check-ins", icon: Clock },
+      { name: "Checked-In Patients", href: "/staff/checked-in-patients", icon: CheckCircle },
+      { name: "Payment History", href: "/staff/payments", icon: CreditCard },
+      { name: "Patients", href: "/staff/patients", icon: Users },
+      { name: "Doctors", href: "/staff/doctors", icon: Stethoscope },
       { name: "Profile", href: "/staff/profile", icon: User },
     ],
     admin: [

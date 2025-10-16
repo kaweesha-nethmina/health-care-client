@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, Clock, User, Building } from "lucide-react"
-import { StaffService } from "@/lib/services"
+import { StaffService } from "@/lib/services/staff-service"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter, useSearchParams } from "next/navigation"
 
@@ -42,7 +42,6 @@ export default function PatientCheckInPage() {
     
     try {
       const response = await StaffService.checkInPatient(parseInt(patientId), {
-        patient_id: parseInt(patientId),
         check_in_time: formData.checkInTime,
         department: formData.department,
         reason_for_visit: formData.reasonForVisit,

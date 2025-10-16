@@ -9,13 +9,22 @@ export interface Payment {
   payment_method: string
   payment_status: string
   payment_date: string
+  description: string
   created_at: string
   updated_at: string
 }
 
+// Payment processing interface
+interface ProcessPaymentData {
+  patient_id: number
+  amount: number
+  payment_method: string
+  description: string
+}
+
 export class PaymentService {
   // Process payment
-  static async processPayment(data: Partial<Payment>): Promise<ApiResponse<Payment>> {
+  static async processPayment(data: ProcessPaymentData): Promise<ApiResponse<Payment>> {
     return api.post<Payment>("/payments/process-payment", data)
   }
 
